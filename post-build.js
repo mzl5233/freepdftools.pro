@@ -3,6 +3,35 @@ import fs from 'fs'
 import path from 'path'
 import { execSync } from 'child_process'
 
+// 处理目录中所有HTML和JS文件
+function processDirectory(dir) {
+  const files = fs.readdirSync(dir);
+  
+  files.forEach(file => {
+    const filePath = path.join(dir, file);
+    const stat = fs.statSync(filePath);
+    
+    if (stat.isDirectory()) {
+      // 递归处理子目录
+      processDirectory(filePath);
+    } else if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
+      // 处理HTML和JS文件
+      let content = fs.readFileSync(filePath, 'utf8');
+      
+      // 替换所有.jsx引用为.js
+      content = content.replace(/\.jsx(['"])/g, '.js$1');
+      
+      // 确保使用相对路径
+      content = content.replace(/href="\//g, 'href="./');
+      content = content.replace(/src="\//g, 'src="./');
+      
+      // 写回文件
+      fs.writeFileSync(filePath, content);
+      console.log(`处理文件: ${filePath}`);
+    }
+  });
+}
+
 // 确保目录存在
 function ensureDirectoryExists(dir) {
   if (!fs.existsSync(dir)) {
@@ -46,6 +75,24 @@ if (fs.existsSync('public/404.html')) {
 // 复制MIME类型配置文件
 if (fs.existsSync('_headers')) {
   copyFile('_headers', 'dist/_headers');
+} else {
+  // 创建默认_headers文件
+  const headersContent = `/*
+  Content-Type: text/html; charset=utf-8
+
+/*.js
+  Content-Type: application/javascript; charset=utf-8
+
+/*.jsx
+  Content-Type: application/javascript; charset=utf-8
+
+/*.css
+  Content-Type: text/css; charset=utf-8
+
+/*.svg
+  Content-Type: image/svg+xml
+`;
+  writeFile('dist/_headers', headersContent);
 }
 
 // 创建.nojekyll文件
@@ -69,34 +116,7 @@ if (fs.existsSync('dist/index.html')) {
   console.log('已修复: dist/index.html 中的路径引用和MIME类型');
 }
 
-// 添加.htaccess文件以处理MIME类型（如果需要）
-const htaccessContent = `
-# 设置正确的MIME类型
-<IfModule mod_mime.c>
-  AddType application/javascript .js
-  AddType application/javascript .mjs
-  AddType application/javascript .jsx
-</IfModule>
-
-# 强制HTTPS
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteCond %{HTTPS} off
-  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-</IfModule>
-
-# 404页面重定向到index.html（单页应用）
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteBase /
-  RewriteRule ^index\.html$ - [L]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule . /index.html [L]
-</IfModule>
-`;
-
-// 创建.htaccess文件（可选，在某些托管环境中可能有用）
-// writeFile('dist/.htaccess', htaccessContent);
+// 处理所有构建目录中的文件
+processDirectory('dist');
 
 console.log('构建后处理完成！'); 
