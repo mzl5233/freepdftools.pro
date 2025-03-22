@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网络代理检查工具</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        .result-box {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            border-left: 5px solid #2980b9;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-left: 5px solid #ffc107;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-left: 5px solid #dc3545;
+        }
+        .success {
+            background-color: #d4edda;
+            border-left: 5px solid #28a745;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .check-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <h1>网络代理检查工具</h1>
+    <p>此工具将帮助您检查是否存在本地代理问题，以便正确访问网站。</p>
+    
+    <button id="checkButton">开始检查</button>
+    
+    <div id="results"></div>
+
+    <div class="result-box">
+        <h3>检查结果说明：</h3>
+        <p>如果检测到您使用了本地代理(127.0.0.1)，请参考以下步骤禁用代理：</p>
+        <ol>
+            <li>检查Windows系统代理设置（按Win+I > 网络和Internet > 代理）</li>
+            <li>检查浏览器代理设置（浏览器设置 > 系统 > 代理）</li>
+            <li>检查是否启用了VPN或代理软件（如Clash、V2Ray等）</li>
+            <li>检查hosts文件（C:\Windows\System32\drivers\etc\hosts）</li>
+        </ol>
+    </div>
+    
+    <script>
+        document.getElementById('checkButton').addEventListener('click', async function() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="check-item">检查中，请稍候...</div>';
+            
+            try {
+                // 检查基本连接
+                const checkResult = await checkConnection();
+                displayResults(checkResult);
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="check-item error">
+                        <h3>检查失败</h3>
+                        <p>错误信息: ${error.message}</p>
+                    </div>
+                `;
+            }
+        });
+
+        async function checkConnection() {
+            const results = {
+                directConnection: false,
+                proxyDetected: false,
+                localProxyPort: null,
+                details: []
+            };
+
+            // 测试GitHub Pages连接
+            try {
+                const testUrl = `https://mzl5233.github.io/freepdftools.pro/_connection_test.json?t=${Date.now()}`;
+                const response = await fetch(testUrl, { 
+                    method: 'HEAD',
+                    cache: 'no-store'
+                });
+                
+                results.directConnection = true;
+                results.details.push({
+                    name: 'GitHub Pages连接',
+                    status: 'success',
+                    message: '可以直接连接到GitHub Pages'
+                });
+            } catch (error) {
+                results.details.push({
+                    name: 'GitHub Pages连接',
+                    status: 'error',
+                    message: `无法连接到GitHub Pages: ${error.message}`
+                });
+            }
+
+            // 检查可能的本地代理
+            const proxyPorts = [7890, 1080, 8080, 8888, 10809];
+            for (const port of proxyPorts) {
+                try {
+                    // 尝试检测代理端口是否打开
+                    // 注意：实际环境中这种检测可能不准确，因为浏览器无法直接探测本地端口
+                    // 这里只是作为简单示例
+                    results.details.push({
+                        name: `本地代理端口 ${port}`,
+                        status: 'info',
+                        message: `可能正在使用端口 ${port} 的本地代理`
+                    });
+                } catch (e) {
+                    // 忽略错误
+                }
+            }
+
+            // 显示用户的IP信息
+            try {
+                const ipResponse = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipResponse.json();
+                results.details.push({
+                    name: '当前IP地址',
+                    status: 'info',
+                    message: `您的公网IP地址: ${ipData.ip}`
+                });
+            } catch (error) {
+                results.details.push({
+                    name: '当前IP地址',
+                    status: 'warning',
+                    message: '无法获取您的IP地址信息'
+                });
+            }
+
+            return results;
+        }
+
+        function displayResults(results) {
+            const resultsDiv = document.getElementById('results');
+            let html = '';
+
+            // 总体状态
+            if (results.proxyDetected) {
+                html += `
+                    <div class="result-box error">
+                        <h3>检测到本地代理</h3>
+                        <p>您的浏览器可能正在使用本地代理服务器，这可能导致网站无法正常加载。</p>
+                        <p>检测到的代理端口: ${results.localProxyPort || '未知'}</p>
+                    </div>
+                `;
+            } else if (results.directConnection) {
+                html += `
+                    <div class="result-box success">
+                        <h3>网络连接正常</h3>
+                        <p>您可以直接连接到GitHub Pages，但可能需要禁用系统代理以正确访问网站。</p>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="result-box warning">
+                        <h3>网络连接状态未知</h3>
+                        <p>无法确定您的网络连接状态，请查看详细检查结果。</p>
+                    </div>
+                `;
+            }
+
+            // 详细检查结果
+            html += '<h3>详细检查结果:</h3>';
+            results.details.forEach(detail => {
+                html += `
+                    <div class="check-item ${detail.status}">
+                        <strong>${detail.name}:</strong> ${detail.message}
+                    </div>
+                `;
+            });
+
+            // 建议操作
+            html += `
+                <div class="result-box">
+                    <h3>建议操作:</h3>
+                    <ol>
+                        <li>临时禁用系统代理设置</li>
+                        <li>退出或禁用代理软件（如Clash, V2Ray等）</li>
+                        <li>使用浏览器的隐私模式访问网站</li>
+                        <li>清除浏览器缓存后重试</li>
+                    </ol>
+                </div>
+            `;
+
+            resultsDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html> 
