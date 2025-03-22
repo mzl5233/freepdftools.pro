@@ -16,68 +16,112 @@
 ### **2.2 非功能需求**
 - **高效解析 PDF**，保证准确性
 - **低延迟 API 响应**，尽量优化调用 Gemini API 的速度
-- **支持 Cloudflare 部署**
+- **支持 GitHub Pages 部署**
 - **安全性**：限制文件大小，防止恶意上传
 
 ## **3. 技术架构**
 ### **3.1 技术栈**
 **前端**:
-- Next.js (App Router + API Routes)
+- React 18
+- Vite
 - Tailwind CSS
-- React + react-markdown (Markdown 预览)
+- PDF.js (PDF处理)
+- React Dropzone (文件上传)
+- Marked (Markdown渲染)
 
 **后端**:
-- Next.js API Routes (处理 PDF 上传 & 解析)
-- pdf-parse / pdf-lib (PDF 文本提取)
-- OpenRouter API (调用 Gemini Flash 2.0 处理 Markdown)
-- Multer (处理文件上传)
+- 纯前端实现，无后端服务
+- PDF.js 在浏览器端提取PDF文本
+- Gemini Pro API（谷歌AI）进行文本格式化
 
-**数据库**:
-- **无数据库存储**（Stateless 方案）
-- 文件存储在 **Cloudflare R2**（可选，暂不考虑）
+**部署**:
+- GitHub Pages
+- GitHub Actions 自动化部署
+- 静态网站托管
 
 ## **4. 系统流程**
 ### **4.1 用户流程**
 1. 用户上传 PDF 文件
-2. 后端解析 PDF，提取纯文本
-3. 调用 Gemini Flash 2.0 进行 Markdown 转换
-4. 服务器返回 Markdown 结果
-5. 前端展示 Markdown 预览，用户可下载 .md 文件
+2. 前端使用PDF.js解析PDF，提取纯文本
+3. 调用 Gemini Pro API 进行 Markdown 转换
+4. 前端展示 Markdown 预览，用户可下载 .md 文件
 
 ### **4.2 API 交互流程**
-1. **POST /api/upload**
+1. **客户端PDF处理**
    - **输入**: 用户上传的 PDF 文件
-   - **处理**: 解析 PDF 文本
+   - **处理**: 使用PDF.js在客户端提取文本
    - **输出**: 纯文本内容
 
-2. **POST /api/convert**
+2. **Gemini API调用**
    - **输入**: 纯文本内容
-   - **处理**: 调用 Gemini Flash 2.0 进行 Markdown 转换
+   - **处理**: 调用 Gemini Pro 进行 Markdown 转换
    - **输出**: Markdown 结果
 
-3. **GET /api/download**
-   - **输入**: Markdown 结果
+3. **文件下载**
+   - **逻辑**: 创建Blob对象并通过客户端下载
    - **输出**: 提供 `.md` 文件下载
 
 ## **5. 详细设计**
 ### **5.1 前端设计**
-- **上传组件**: `file input` + `drag and drop`
-- **Markdown 预览组件**: `react-markdown`
-- **转换按钮**: 调用后端 API
-- **下载按钮**: 提供 Markdown 文件下载
+- **上传组件**: React Dropzone 实现拖放式文件上传
+- **PDF处理**: PDF.js提取文本，优化结构处理
+- **Markdown 预览组件**: Marked 渲染Markdown
+- **双视图模式**: 原始文本/格式化视图切换
+- **下载功能**: Blob API生成可下载的Markdown文件
 
-### **5.2 后端设计（Next.js API Routes）**
-- **/api/upload**: 使用 `pdf-parse` 解析 PDF
-- **/api/convert**: 发送文本到 Gemini Flash 2.0
-- **/api/download**: 生成 `.md` 文件并提供下载
+### **5.2 构建与部署配置**
+- **Vite配置**: 
+  - 使用相对路径基础URL（`./'）
+  - 资源输出优化，包含文件哈希
+  - 针对GitHub Pages的特殊处理
+
+- **构建后处理**: 
+  - 自定义post-build脚本处理资源路径
+  - 添加'.nojekyll'文件避免Jekyll处理
+  - 复制404.html实现SPA路由支持
+  
+- **MIME类型处理**:
+  - 使用_headers文件配置正确的MIME类型
+  - 解决JSX文件类型识别问题
+  - 确保JavaScript模块正确加载
 
 ## **6. 部署方案**
 - **GitHub Actions 自动化部署**
-- **部署到 Cloudflare Pages 或 Vercel**
-- **可选：Cloudflare R2 作为临时存储（如需缓存）**
+  - 触发条件：提交到main分支
+  - 构建流程：安装依赖 -> 构建 -> 部署到gh-pages分支
+  - 环境变量：通过GitHub Secrets管理API密钥
 
-## **7. 未来优化方向**
+- **GitHub Pages配置**
+  - 使用gh-pages分支作为发布源
+  - 添加特殊配置文件解决SPA路由
+  - 自定义域名支持（可选）
+
+- **资源优化**:
+  - JavaScript和CSS文件包含哈希值
+  - 图片和字体资源内联处理（小于4KB）
+  - 构建后的资源路径自动修复
+
+## **7. 特殊技术考量**
+- **MIME类型处理**: 
+  - 解决GitHub Pages对JSX文件的MIME类型不正确问题
+  - 使用_headers和meta标签确保正确的Content-Type
+  - 确保所有Javascript模块能正确加载
+
+- **SPA路由处理**:
+  - 自定义404.html重定向到主页
+  - 路径参数传递与解析
+  - 保持用户体验的无刷新导航
+
+- **资源路径处理**:
+  - 确保所有资源使用相对路径
+  - 构建后自动修复绝对路径引用
+  - 解决跨域和资源加载问题
+
+## **8. 未来优化方向**
 - **支持多种格式（如 DOCX、EPUB 转 Markdown）**
 - **优化 PDF 表格解析**
-- **提供用户历史记录（需数据库支持）**
+- **添加高级格式化选项**
+- **实现离线处理能力**
+- **提供更多AI辅助编辑功能**
+- **优化移动设备体验**
 
