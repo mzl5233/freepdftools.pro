@@ -11,6 +11,12 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
       },
+      output: {
+        // 确保资产文件名包含哈希值以便于缓存控制
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
+      }
     },
     outDir: 'dist',
     emptyOutDir: true,
