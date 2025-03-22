@@ -1,0 +1,83 @@
+# **FreePDFTools.pro 设计文档**
+
+## **1. 项目概述**
+**名称**: FreePDFTools.pro  
+**功能**: 提供 PDF 转 Markdown 工具，支持用户上传 PDF，并返回格式化良好的 Markdown 文件。
+**目标市场**: 美国、加拿大、墨西哥
+
+## **2. 需求分析**
+### **2.1 功能需求**
+- **用户上传 PDF 文件**
+- **后端解析 PDF 提取文本**
+- **调用 Gemini Flash 2.0 进行 Markdown 格式化**
+- **返回 Markdown 结果（可下载 .md 文件）**
+- **前端提供 Markdown 预览**
+
+### **2.2 非功能需求**
+- **高效解析 PDF**，保证准确性
+- **低延迟 API 响应**，尽量优化调用 Gemini API 的速度
+- **支持 Cloudflare 部署**
+- **安全性**：限制文件大小，防止恶意上传
+
+## **3. 技术架构**
+### **3.1 技术栈**
+**前端**:
+- Next.js (App Router + API Routes)
+- Tailwind CSS
+- React + react-markdown (Markdown 预览)
+
+**后端**:
+- Next.js API Routes (处理 PDF 上传 & 解析)
+- pdf-parse / pdf-lib (PDF 文本提取)
+- OpenRouter API (调用 Gemini Flash 2.0 处理 Markdown)
+- Multer (处理文件上传)
+
+**数据库**:
+- **无数据库存储**（Stateless 方案）
+- 文件存储在 **Cloudflare R2**（可选，暂不考虑）
+
+## **4. 系统流程**
+### **4.1 用户流程**
+1. 用户上传 PDF 文件
+2. 后端解析 PDF，提取纯文本
+3. 调用 Gemini Flash 2.0 进行 Markdown 转换
+4. 服务器返回 Markdown 结果
+5. 前端展示 Markdown 预览，用户可下载 .md 文件
+
+### **4.2 API 交互流程**
+1. **POST /api/upload**
+   - **输入**: 用户上传的 PDF 文件
+   - **处理**: 解析 PDF 文本
+   - **输出**: 纯文本内容
+
+2. **POST /api/convert**
+   - **输入**: 纯文本内容
+   - **处理**: 调用 Gemini Flash 2.0 进行 Markdown 转换
+   - **输出**: Markdown 结果
+
+3. **GET /api/download**
+   - **输入**: Markdown 结果
+   - **输出**: 提供 `.md` 文件下载
+
+## **5. 详细设计**
+### **5.1 前端设计**
+- **上传组件**: `file input` + `drag and drop`
+- **Markdown 预览组件**: `react-markdown`
+- **转换按钮**: 调用后端 API
+- **下载按钮**: 提供 Markdown 文件下载
+
+### **5.2 后端设计（Next.js API Routes）**
+- **/api/upload**: 使用 `pdf-parse` 解析 PDF
+- **/api/convert**: 发送文本到 Gemini Flash 2.0
+- **/api/download**: 生成 `.md` 文件并提供下载
+
+## **6. 部署方案**
+- **GitHub Actions 自动化部署**
+- **部署到 Cloudflare Pages 或 Vercel**
+- **可选：Cloudflare R2 作为临时存储（如需缓存）**
+
+## **7. 未来优化方向**
+- **支持多种格式（如 DOCX、EPUB 转 Markdown）**
+- **优化 PDF 表格解析**
+- **提供用户历史记录（需数据库支持）**
+
