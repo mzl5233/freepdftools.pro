@@ -2,27 +2,32 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="./vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>FreePDFTools.pro - PDF转Markdown工具</title>
     <meta name="description" content="免费在线PDF转Markdown工具，使用AI技术保留原文格式">
     <!-- GitHub Pages SPA 重定向 -->
     <script type="text/javascript">
-      (function(l) {
-        if (l.search[1] === '/' ) {
-          var decoded = l.search.slice(1).split('&').map(function(s) { 
-            return s.replace(/~and~/g, '&')
-          }).join('?');
-          window.history.replaceState(null, null,
+      // 单页应用GitHub Pages处理
+      (function() {
+        // 如果不是在本地开发环境
+        if (window.location.hostname !== 'localhost') {
+          const l = window.location;
+          if (l.search[1] === '/') {
+            var decoded = l.search.slice(1).split('&').map(function(s) { 
+              return s.replace(/~and~/g, '&')
+            }).join('?');
+            window.history.replaceState(null, null,
               l.pathname.slice(0, -1) + decoded + l.hash
-          );
+            );
+          }
         }
-      }(window.location))
+      })();
     </script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="src/main.jsx"></script>
+    <script type="module" src="./src/main.jsx"></script>
   </body>
 </html>
