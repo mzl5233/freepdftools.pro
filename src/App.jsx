@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import * as pdfjsLib from 'pdfjs-dist';
 import { marked } from 'marked';
+import { getBrowserLanguage, getText } from './i18n';
+import LanguageSelector from './components/LanguageSelector';
 
 // Initialize PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
@@ -12,6 +14,22 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('convert');
   const [previewMode, setPreviewMode] = useState('raw');
+  const [language, setLanguage] = useState('en');
+  
+  // 初始化语言设置为浏览器语言或本地存储中的语言
+  useEffect(() => {
+    const savedLang = localStorage.getItem('pdftools-language');
+    const initialLang = savedLang || getBrowserLanguage();
+    setLanguage(initialLang);
+  }, []);
+  
+  // 当语言改变时保存到本地存储
+  useEffect(() => {
+    localStorage.setItem('pdftools-language', language);
+  }, [language]);
+  
+  // 翻译函数
+  const t = (key) => getText(language, key);
 
   const processTextStyles = (textContent) => {
     let processedText = '';
@@ -85,7 +103,7 @@ function App() {
       }
     } catch (error) {
       console.error('Error processing PDF:', error);
-      alert('Error processing PDF file');
+      alert(t('errors.processingError'));
     } finally {
       setIsLoading(false);
     }
@@ -120,7 +138,7 @@ function App() {
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center space-x-4">
             <h2 className="text-lg font-medium text-gray-900">
-              {activeTab === 'convert' ? 'Markdown Output' : 'Translated Text'}
+              {activeTab === 'convert' ? t('output.markdownOutput') : t('output.translatedText')}
             </h2>
             <div className="flex items-center space-x-2">
               <button
@@ -131,7 +149,7 @@ function App() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                Raw
+                {t('output.raw')}
               </button>
               <button
                 onClick={() => setPreviewMode('formatted')}
@@ -141,7 +159,7 @@ function App() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                Formatted
+                {t('output.formatted')}
               </button>
             </div>
           </div>
@@ -150,7 +168,7 @@ function App() {
               onClick={downloadMarkdown}
               className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
             >
-              Download Markdown
+              {t('output.downloadMarkdown')}
             </button>
           )}
         </div>
@@ -175,8 +193,13 @@ function App() {
     <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          <div className="px-6 py-4 bg-indigo-600">
-            <h1 className="text-2xl font-bold text-white">PDF Tool Station</h1>
+          <div className="px-6 py-4 bg-indigo-600 flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-white">{t('header.title')}</h1>
+            <LanguageSelector 
+              currentLang={language} 
+              onChange={setLanguage} 
+              t={t} 
+            />
           </div>
 
           <div className="border-b border-gray-200">
@@ -189,7 +212,7 @@ function App() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 } flex-1 py-4 px-6 text-center border-b-2 font-medium`}
               >
-                PDF to Markdown
+                {t('tabs.convert')}
               </button>
               <button
                 onClick={() => setActiveTab('translate')}
@@ -199,7 +222,7 @@ function App() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 } flex-1 py-4 px-6 text-center border-b-2 font-medium`}
               >
-                PDF Translation
+                {t('tabs.translate')}
               </button>
             </nav>
           </div>
@@ -214,16 +237,16 @@ function App() {
               <input {...getInputProps()} />
               <div className="text-gray-600">
                 {isDragActive ? (
-                  <p>Drop the PDF file here...</p>
+                  <p>{t('dropzone.dragActive')}</p>
                 ) : (
-                  <p>Drag and drop a PDF file here, or click to select a file</p>
+                  <p>{t('dropzone.dragInactive')}</p>
                 )}
               </div>
             </div>
 
             {isLoading && (
               <div className="mt-4 text-center text-gray-600">
-                Processing your PDF...
+                {t('output.processing')}
               </div>
             )}
 
