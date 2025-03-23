@@ -1,10 +1,20 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './App.jsx'
+import App from './App'
 import './index.css'
+import './i18n/config'
+
+// 加载指示器组件
+const LoadingIndicator = () => (
+  <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-75 z-50">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+  </div>
+)
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    <Suspense fallback={<LoadingIndicator />}>
+      <App />
+    </Suspense>
   </React.StrictMode>,
 )

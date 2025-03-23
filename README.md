@@ -13,7 +13,13 @@ A powerful web application for converting PDF documents to Markdown format and t
 - **PDF Translation**
   - Extract text from PDFs
   - Preserve document formatting
-  - Support for multiple languages (coming soon)
+  - Support for multiple languages
+
+- **Internationalization (i18n)**
+  - Full multilingual support with 7 languages (English, Spanish, German, French, Chinese, Japanese, more to come)
+  - Automatic language detection based on browser settings
+  - Easy language switching
+  - Localized UI components and messages
 
 - **User Interface**
   - Modern, responsive design
@@ -57,6 +63,12 @@ npm run dev
   - React Dropzone
   - Marked
 
+- **Internationalization**
+  - i18next
+  - react-i18next
+  - i18next-browser-languagedetector
+  - i18next-http-backend
+
 - **Development Tools**
   - TypeScript
   - PostCSS
@@ -68,13 +80,31 @@ npm run dev
 pdf-tool-station/
 ├── src/
 │   ├── components/       # React components
+│   ├── i18n/            # Internationalization configuration
 │   ├── services/        # API and utility services
 │   ├── styles/          # Global styles
 │   ├── App.jsx         # Main application component
 │   └── main.jsx        # Application entry point
 ├── public/             # Static assets
+│   ├── locales/        # Translation files
+│   │   ├── en/         # English translations
+│   │   ├── es/         # Spanish translations
+│   │   ├── de/         # German translations
+│   │   ├── fr/         # French translations
+│   │   ├── zh/         # Chinese translations
+│   │   └── ja/         # Japanese translations
 └── dist/              # Production build output
 ```
+
+## Internationalization
+
+The application supports multiple languages and provides an intuitive language switcher component. To add or modify translations:
+
+1. Navigate to `public/locales/{language_code}/translation.json`
+2. Edit the JSON file with your translations
+3. For adding a new language, create a new folder with the language code and copy the structure from an existing translation file
+
+See the [DEPLOYMENT.md](./DEPLOYMENT.md) for more information on deployment considerations with i18n.
 
 ## Contributing
 
@@ -89,4 +119,6 @@ pdf-tool-station/
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 更新记录
-- 最后更新时间：2025年3月23日 16:30
+- 最后更新时间：2025年3月24日 00:05
+- 添加了国际化支持，支持英语、西班牙语、德语、法语、中文和日语
+- 优化SEO配置

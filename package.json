@@ -9,17 +9,22 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google-cloud/translate": "^8.0.2",
+    "@headlessui/react": "^1.7.17",
+    "@tailwindcss/typography": "^0.5.10",
+    "autoprefixer": "^10.4.16",
+    "i18next": "^24.2.3",
+    "i18next-browser-languagedetector": "^8.0.4",
+    "i18next-http-backend": "^3.0.2",
+    "i18next-react": "^0.2.2",
+    "marked": "^9.1.2",
+    "pdfjs-dist": "^3.11.174",
+    "postcss": "^8.4.31",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "pdfjs-dist": "^3.11.174",
-    "marked": "^9.1.2",
-    "@google-cloud/translate": "^8.0.2",
-    "tailwindcss": "^3.3.3",
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.31",
-    "@headlessui/react": "^1.7.17",
     "react-dropzone": "^14.2.3",
-    "@tailwindcss/typography": "^0.5.10"
+    "react-i18next": "^15.4.1",
+    "tailwindcss": "^3.3.3"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",

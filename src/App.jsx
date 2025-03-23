@@ -1,35 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useDropzone } from 'react-dropzone';
 import * as pdfjsLib from 'pdfjs-dist';
 import { marked } from 'marked';
-import { getBrowserLanguage, getText } from './i18n';
-import LanguageSelector from './components/LanguageSelector';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from './components/LanguageSwitcher';
+import { updateMetadata } from './i18n/config';
 
 // Initialize PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
+// 加载指示器组件
+const LoadingIndicator = () => (
+  <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-75 z-50">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+  </div>
+);
+
 function App() {
+  const { t, i18n } = useTranslation();
   const [markdown, setMarkdown] = useState('');
   const [translatedText, setTranslatedText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('convert');
   const [previewMode, setPreviewMode] = useState('raw');
-  const [language, setLanguage] = useState('en');
   
-  // 初始化语言设置为浏览器语言或本地存储中的语言
+  // 更新元数据
   useEffect(() => {
-    const savedLang = localStorage.getItem('pdftools-language');
-    const initialLang = savedLang || getBrowserLanguage();
-    setLanguage(initialLang);
-  }, []);
-  
-  // 当语言改变时保存到本地存储
-  useEffect(() => {
-    localStorage.setItem('pdftools-language', language);
-  }, [language]);
-  
-  // 翻译函数
-  const t = (key) => getText(language, key);
+    // 设置页面标题
+    document.title = t('header.title');
+    
+    // 更新其他元数据
+    updateMetadata(i18n.language);
+  }, [t, i18n.language]);
 
   const processTextStyles = (textContent) => {
     let processedText = '';
@@ -190,71 +192,69 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          <div className="px-6 py-4 bg-indigo-600 flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-white">{t('header.title')}</h1>
-            <LanguageSelector 
-              currentLang={language} 
-              onChange={setLanguage} 
-              t={t} 
-            />
-          </div>
-
-          <div className="border-b border-gray-200">
-            <nav className="flex -mb-px">
-              <button
-                onClick={() => setActiveTab('convert')}
-                className={`${
-                  activeTab === 'convert'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } flex-1 py-4 px-6 text-center border-b-2 font-medium`}
-              >
-                {t('tabs.convert')}
-              </button>
-              <button
-                onClick={() => setActiveTab('translate')}
-                className={`${
-                  activeTab === 'translate'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } flex-1 py-4 px-6 text-center border-b-2 font-medium`}
-              >
-                {t('tabs.translate')}
-              </button>
-            </nav>
-          </div>
-
-          <div className="p-6">
-            <div
-              {...getRootProps()}
-              className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
-                isDragActive ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 hover:border-indigo-500'
-              }`}
-            >
-              <input {...getInputProps()} />
-              <div className="text-gray-600">
-                {isDragActive ? (
-                  <p>{t('dropzone.dragActive')}</p>
-                ) : (
-                  <p>{t('dropzone.dragInactive')}</p>
-                )}
-              </div>
+    <Suspense fallback={<LoadingIndicator />}>
+      <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div className="px-6 py-4 bg-indigo-600 flex justify-between items-center">
+              <h1 className="text-2xl font-bold text-white">{t('header.title')}</h1>
+              <LanguageSwitcher />
             </div>
 
-            {isLoading && (
-              <div className="mt-4 text-center text-gray-600">
-                {t('output.processing')}
-              </div>
-            )}
+            <div className="border-b border-gray-200">
+              <nav className="flex -mb-px">
+                <button
+                  onClick={() => setActiveTab('convert')}
+                  className={`${
+                    activeTab === 'convert'
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } flex-1 py-4 px-6 text-center border-b-2 font-medium`}
+                >
+                  {t('tabs.convert')}
+                </button>
+                <button
+                  onClick={() => setActiveTab('translate')}
+                  className={`${
+                    activeTab === 'translate'
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } flex-1 py-4 px-6 text-center border-b-2 font-medium`}
+                >
+                  {t('tabs.translate')}
+                </button>
+              </nav>
+            </div>
 
-            {renderContent()}
+            <div className="p-6">
+              <div
+                {...getRootProps()}
+                className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
+                  isDragActive ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 hover:border-indigo-500'
+                }`}
+              >
+                <input {...getInputProps()} />
+                <div className="text-gray-600">
+                  {isDragActive ? (
+                    <p>{t('dropzone.dragActive')}</p>
+                  ) : (
+                    <p>{t('dropzone.dragInactive')}</p>
+                  )}
+                </div>
+              </div>
+
+              {isLoading && (
+                <div className="mt-4 text-center text-gray-600">
+                  {t('output.processing')}
+                </div>
+              )}
+
+              {renderContent()}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </Suspense>
   );
 }
 
