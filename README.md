@@ -87,3 +87,6 @@ pdf-tool-station/
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 更新记录
+- 最后更新时间：2025年3月23日
