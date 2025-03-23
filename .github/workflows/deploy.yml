@@ -44,6 +44,8 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: freepdftools-pro
           directory: dist
+        env:
+          DEBUG: "true"
       
       - name: 部署结果
         if: always()
