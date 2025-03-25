@@ -1,0 +1,71 @@
+{
+  "header": {
+    "title": "PDF Инструменты"
+  },
+  "tabs": {
+    "convert": "PDF в Markdown",
+    "translate": "Перевод PDF"
+  },
+  "dropzone": {
+    "dragActive": "Перетащите PDF файл сюда...",
+    "dragInactive": "Перетащите PDF файл сюда или нажмите, чтобы выбрать файл",
+    "mobileUpload": "Нажмите, чтобы выбрать PDF файл"
+  },
+  "output": {
+    "markdownOutput": "Вывод Markdown",
+    "translatedText": "Переведенный текст",
+    "raw": "Исходный",
+    "formatted": "Форматированный",
+    "downloadMarkdown": "Скачать Markdown",
+    "processing": "Обработка PDF..."
+  },
+  "errors": {
+    "processingError": "Ошибка при обработке PDF файла",
+    "fileTooLarge": "Файл слишком большой (макс. 50МБ)",
+    "invalidFileType": "Поддерживаются только PDF файлы",
+    "translationError": "Ошибка при переводе текста"
+  },
+  "translation": {
+    "targetLanguage": "Целевой язык"
+  },
+  "languages": {
+    "tier1": "Основные языки",
+    "tier2": "Вторичные языки",
+    "tier3": "Дополнительные языки",
+    "en": "English (Английский)",
+    "es": "Español (Испанский)",
+    "de": "Deutsch (Немецкий)",
+    "fr": "Français (Французский)",
+    "pt-BR": "Português Brasileiro (Бразильский португальский)",
+    "ja": "日本語 (Японский)",
+    "zh": "中文 (Китайский)",
+    "ru": "Русский",
+    "hi": "हिन्दी (Хинди)",
+    "id": "Bahasa Indonesia (Индонезийский)",
+    "it": "Italiano (Итальянский)",
+    "es-MX": "Español Mexicano (Мексиканский испанский)",
+    "nl": "Nederlands (Голландский)",
+    "ko": "한국어 (Корейский)",
+    "tr": "Türkçe (Турецкий)",
+    "pl": "Polski (Польский)",
+    "sv": "Svenska (Шведский)",
+    "rm": "Rumantsch (Романшский)",
+    "ar": "العربية (Арабский)",
+    "ha": "Hausa (Хауса)",
+    "ig": "Igbo (Игбо)",
+    "yo": "Yorùbá (Йоруба)"
+  },
+  "meta": {
+    "title": "Конвертировать PDF в Markdown онлайн | PDF Инструменты",
+    "description": "Конвертируйте PDF файлы в формат Markdown с помощью нашего бесплатного онлайн-инструмента. Сохраняйте форматирование, извлекайте текст и конвертируйте PDF в чистый Markdown.",
+    "keywords": "pdf в markdown, конвертер pdf, конвертер markdown, бесплатный pdf инструмент, извлечение pdf"
+  },
+  "languageGroups": {
+    "popular": "Популярные",
+    "asian": "Азиатские",
+    "other": "Другие"
+  },
+  "common": {
+    "downloading": "Загрузка..."
+  }
+} 

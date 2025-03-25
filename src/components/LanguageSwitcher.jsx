@@ -56,6 +56,20 @@ const LanguageSwitcher = () => {
     }
   }, [i18n.language]);
 
+  // 点击外部关闭下拉菜单
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isOpen && !event.target.closest('.language-switcher')) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
   const handleLanguageChange = async (langCode) => {
     if (langCode === currentLang || isChanging) return;
     
@@ -70,18 +84,13 @@ const LanguageSwitcher = () => {
         console.log('语言切换失败，尝试刷新资源...');
         await reloadLanguageResources();
       }
-      
-      // 触发页面更新
-      document.dispatchEvent(new Event('i18n-updated'));
-      
-      // 如果仍然失败，考虑刷新页面
-      if (i18n.language !== langCode) {
-        console.log('语言未成功切换，刷新页面...');
-        setTimeout(() => window.location.reload(), 100);
-      }
     } catch (error) {
       console.error('语言切换错误:', error);
-      setIsChanging(false);
+    } finally {
+      // 确保状态更新，不管成功与否
+      setTimeout(() => {
+        setIsChanging(false);
+      }, 200);
     }
   };
 
@@ -89,9 +98,22 @@ const LanguageSwitcher = () => {
   const getCurrentLanguageName = () => {
     return supportedLanguages[currentLang]?.nativeName || 'English';
   };
+  
+  // 常用语言列表 - 用于优先显示
+  const popularLanguages = ['en', 'zh', 'es', 'ru'];
+  
+  // 对语言列表进行排序，优先显示常用语言
+  const sortedLanguages = Object.entries(supportedLanguages).sort((a, b) => {
+    const aIsPopular = popularLanguages.includes(a[0]);
+    const bIsPopular = popularLanguages.includes(b[0]);
+    
+    if (aIsPopular && !bIsPopular) return -1;
+    if (!aIsPopular && bIsPopular) return 1;
+    return a[1].nativeName.localeCompare(b[1].nativeName);
+  });
 
   return (
-    <div className="relative">
+    <div className="relative language-switcher">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center px-3 py-1.5 text-white rounded-md bg-indigo-700 hover:bg-indigo-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -99,7 +121,14 @@ const LanguageSwitcher = () => {
         disabled={isChanging}
       >
         <span className="mr-1">
-          {isChanging ? '...' : getCurrentLanguageName()}
+          {isChanging ? (
+            <span className="inline-block w-4 h-4">
+              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </span>
+          ) : getCurrentLanguageName()}
         </span>
         <svg
           className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'transform rotate-180' : ''}`}
@@ -113,9 +142,39 @@ const LanguageSwitcher = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 max-h-96 overflow-y-auto">
-          <div className="py-1" role="menu" aria-orientation="vertical">
-            {Object.entries(supportedLanguages).map(([code, { nativeName }]) => (
+        <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 max-h-72 overflow-y-auto divide-y divide-gray-100">
+          {popularLanguages.length > 0 && (
+            <div className="py-1">
+              <div className="px-3 py-1 text-xs font-semibold text-gray-500">常用语言</div>
+              {sortedLanguages
+                .filter(([code]) => popularLanguages.includes(code))
+                .map(([code, { nativeName }]) => (
+                <button
+                  key={code}
+                  onClick={() => handleLanguageChange(code)}
+                  className={`block w-full text-left px-4 py-2 text-sm ${
+                    code === currentLang
+                      ? 'bg-indigo-100 text-indigo-900 font-medium'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                  role="menuitem"
+                >
+                  {nativeName}
+                  {code === currentLang && (
+                    <span className="ml-2 text-indigo-600">✓</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+          
+          <div className="py-1">
+            {popularLanguages.length > 0 && (
+              <div className="px-3 py-1 text-xs font-semibold text-gray-500">其他语言</div>
+            )}
+            {sortedLanguages
+              .filter(([code]) => !popularLanguages.includes(code))
+              .map(([code, { nativeName }]) => (
               <button
                 key={code}
                 onClick={() => handleLanguageChange(code)}

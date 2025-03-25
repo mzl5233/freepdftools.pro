@@ -90,6 +90,49 @@ const resources = {
         "other": "其他语言"
       }
     }
+  },
+  ru: {
+    translation: {
+      "header": {
+        "title": "PDF Инструменты"
+      },
+      "tabs": {
+        "convert": "PDF в Markdown",
+        "translate": "Перевод PDF"
+      },
+      "dropzone": {
+        "dragActive": "Перетащите PDF файл сюда...",
+        "dragInactive": "Перетащите PDF файл сюда или нажмите, чтобы выбрать файл",
+        "mobileUpload": "Нажмите, чтобы выбрать PDF файл"
+      },
+      "output": {
+        "markdownOutput": "Вывод Markdown",
+        "translatedText": "Переведенный текст",
+        "raw": "Исходный",
+        "formatted": "Форматированный",
+        "downloadMarkdown": "Скачать Markdown",
+        "processing": "Обработка PDF..."
+      },
+      "errors": {
+        "processingError": "Ошибка при обработке PDF файла",
+        "fileTooLarge": "Файл слишком большой (макс. 50МБ)",
+        "invalidFileType": "Поддерживаются только PDF файлы",
+        "translationError": "Ошибка при переводе текста"
+      },
+      "translation": {
+        "targetLanguage": "Целевой язык"
+      },
+      "meta": {
+        "title": "Конвертировать PDF в Markdown онлайн | PDF Инструменты",
+        "description": "Конвертируйте PDF файлы в формат Markdown с помощью нашего бесплатного онлайн-инструмента. Сохраняйте форматирование, извлекайте текст и конвертируйте PDF в чистый Markdown.",
+        "keywords": "pdf в markdown, конвертер pdf, конвертер markdown, бесплатный pdf инструмент, извлечение pdf"
+      },
+      "languageGroups": {
+        "popular": "Популярные",
+        "asian": "Азиатские",
+        "other": "Другие"
+      }
+    }
   }
 };
 
@@ -222,7 +265,13 @@ const initI18n = () => {
         // 跨域请求
         crossDomain: true,
         // 允许重试加载失败的资源
-        allowMultiLoading: true
+        allowMultiLoading: true,
+        // 增加重试次数
+        retries: 3,
+        // 请求超时时间(ms)
+        requestOptions: {
+          timeout: 5000
+        }
       },
       
       // 插值配置
@@ -260,6 +309,43 @@ const initI18n = () => {
 // 初始化i18n
 const i18nInstance = initI18n();
 
+// 预加载常用语言
+const preloadCommonLanguages = async () => {
+  const commonLanguages = ['en', 'zh', 'es', 'ru'];
+  
+  try {
+    await Promise.all(
+      commonLanguages.map(async (lng) => {
+        // 如果语言已经有内置资源，跳过服务器加载
+        if (resources[lng]) {
+          console.log(`使用内置${lng}语言资源`);
+          return;
+        }
+        
+        try {
+          console.log(`预加载${lng}语言资源`);
+          await i18nInstance.loadLanguages(lng);
+        } catch (error) {
+          console.warn(`预加载${lng}语言失败:`, error);
+        }
+      })
+    );
+  } catch (e) {
+    console.error('语言预加载错误:', e);
+  }
+};
+
+// 在浏览器环境下执行预加载
+if (typeof window !== 'undefined') {
+  // 使用requestIdleCallback在浏览器空闲时预加载资源
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(() => preloadCommonLanguages());
+  } else {
+    // 降级处理
+    setTimeout(preloadCommonLanguages, 2000);
+  }
+}
+
 // 监听语言变化
 i18nInstance.on('languageChanged', (lng) => {
   console.log(`语言已更改为: ${lng}`);
@@ -285,6 +371,9 @@ i18nInstance.on('languageChanged', (lng) => {
       'language': lng
     });
   }
+  
+  // 触发自定义事件，通知组件更新
+  document.dispatchEvent(new Event('i18n-updated'));
 });
 
 // 检查是否是RTL语言
@@ -401,20 +490,29 @@ export const updateMetadata = (language) => {
 // 语言切换函数
 export const changeLanguage = async (language) => {
   try {
+    // 先检查是否有内置资源
+    if (resources[language] && resources[language].translation) {
+      console.log(`使用内置${language}语言资源`);
+      i18nInstance.addResourceBundle(language, 'translation', resources[language].translation, true, true);
+    }
+    
     // 检查语言资源是否已加载
     const hasLoadedLanguage = i18nInstance.hasResourceBundle(language, 'translation');
     
     // 如果没有加载，预先加载资源
     if (!hasLoadedLanguage) {
       try {
+        console.log(`尝试从服务器加载${language}语言资源`);
         const response = await fetch(`/locales/${language}/translation.json`);
         if (response.ok) {
           const data = await response.json();
           i18nInstance.addResourceBundle(language, 'translation', data);
+          console.log(`成功加载${language}语言资源`);
         } else {
           console.warn(`无法加载语言资源: ${language}`);
           // 如果加载失败，检查是否有内置的资源
           if (resources[language]) {
+            console.log(`回退到内置${language}语言资源`);
             i18nInstance.addResourceBundle(language, 'translation', resources[language].translation);
           }
         }
@@ -422,6 +520,7 @@ export const changeLanguage = async (language) => {
         console.error(`加载语言资源时出错: ${language}`, error);
         // 如果加载失败，使用内置资源
         if (resources[language]) {
+          console.log(`错误回退到内置${language}语言资源`);
           i18nInstance.addResourceBundle(language, 'translation', resources[language].translation);
         }
       }
@@ -429,9 +528,13 @@ export const changeLanguage = async (language) => {
     
     // 切换语言
     await i18nInstance.changeLanguage(language);
+    console.log(`语言已切换为: ${language}`);
     
     // 更新页面URL
     updateUrlLanguage(language);
+    
+    // 触发自定义事件，通知组件更新
+    document.dispatchEvent(new Event('i18n-updated'));
     
     return true;
   } catch (error) {
@@ -445,6 +548,12 @@ export const reloadLanguageResources = async () => {
   const currentLng = i18nInstance.language;
   
   try {
+    // 先尝试重新加载内置资源
+    if (resources[currentLng]) {
+      console.log(`重新加载内置${currentLng}语言资源`);
+      i18nInstance.addResourceBundle(currentLng, 'translation', resources[currentLng].translation, true, true);
+    }
+    
     // 重新加载当前语言资源
     await i18nInstance.reloadResources(currentLng);
     console.log(`已刷新语言资源: ${currentLng}`);
@@ -476,7 +585,7 @@ export const fixLanguageCode = (code) => {
   if (code.includes('-')) {
     const mainCode = code.split('-')[0];
     // 检查是否支持主要语言
-    if (['en', 'zh', 'es', 'fr', 'de', 'ja', 'ko'].includes(mainCode)) {
+    if (['en', 'zh', 'es', 'fr', 'de', 'ja', 'ko', 'ru'].includes(mainCode)) {
       return mainCode;
     }
   }
@@ -502,6 +611,12 @@ export const initLanguage = () => {
   
   // 设置语言
   if (languageToUse) {
+    // 如果有内置资源，优先使用
+    if (resources[languageToUse]) {
+      console.log(`初始化使用内置${languageToUse}语言资源`);
+      i18nInstance.addResourceBundle(languageToUse, 'translation', resources[languageToUse].translation, true, true);
+    }
+    
     changeLanguage(languageToUse);
   }
   

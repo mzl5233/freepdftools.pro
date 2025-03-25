@@ -1,10 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { Suspense, lazy, useEffect } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import './index.css'
 
 // 确保i18n在应用渲染前初始化
-import i18nInstance, { initLanguage } from './i18n/config'
+import i18nInstance, { initLanguage, getCurrentLanguage } from './i18n/config'
 
 // 懒加载主应用组件
 const App = lazy(() => import('./App'))
@@ -33,28 +33,81 @@ const logPerformance = () => {
   }
 }
 
+// 定制加载指示器，支持多语言提示
+const LoadingIndicator = ({ message }) => {
+  // 默认消息
+  const defaultMessage = message || "加载应用..."
+  
+  // 根据当前语言调整样式方向
+  const isRTL = ['ar', 'he', 'fa', 'ur'].includes(getCurrentLanguage());
+  
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-600"></div>
+      <div className="ml-4 text-indigo-600 text-xl font-medium">{defaultMessage}</div>
+    </div>
+  )
+}
+
 // 应用包装器，用于初始化设置
 const AppWrapper = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState("");
+  
   // 初始化多语言支持
   useEffect(() => {
-    // 在组件挂载时初始化语言
-    const detectedLanguage = initLanguage();
-    console.log(`检测到的语言: ${detectedLanguage}`);
-    
-    // 监听URL变化，以便于处理语言切换
-    const handleUrlChange = () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlLang = urlParams.get('lng');
-      if (urlLang && urlLang !== i18nInstance.language) {
-        i18nInstance.changeLanguage(urlLang);
+    const initApp = async () => {
+      try {
+        // 在组件挂载时初始化语言
+        setLoadingMessage("正在加载语言资源...");
+        const detectedLanguage = initLanguage();
+        console.log(`检测到的语言: ${detectedLanguage}`);
+        
+        // 设置语言加载事件
+        const handleLanguageLoaded = () => {
+          console.log("语言资源加载完成");
+          setIsLoading(false);
+        };
+        
+        // 监听语言加载完成事件
+        document.addEventListener('i18n-updated', handleLanguageLoaded);
+        
+        // 监听URL变化，以便于处理语言切换
+        const handleUrlChange = () => {
+          const urlParams = new URLSearchParams(window.location.search);
+          const urlLang = urlParams.get('lng');
+          if (urlLang && urlLang !== i18nInstance.language) {
+            setLoadingMessage("正在切换语言...");
+            setIsLoading(true);
+            i18nInstance.changeLanguage(urlLang);
+          }
+        };
+
+        window.addEventListener('popstate', handleUrlChange);
+        
+        // 检查语言资源是否已加载
+        setTimeout(() => {
+          // 如果5秒后仍在加载，取消加载状态，避免永久等待
+          setIsLoading(false);
+        }, 5000);
+        
+        return () => {
+          document.removeEventListener('i18n-updated', handleLanguageLoaded);
+          window.removeEventListener('popstate', handleUrlChange);
+        };
+      } catch (error) {
+        console.error("应用初始化错误:", error);
+        setIsLoading(false);
       }
     };
-
-    window.addEventListener('popstate', handleUrlChange);
-    return () => {
-      window.removeEventListener('popstate', handleUrlChange);
-    };
+    
+    initApp();
   }, []);
+
+  // 如果还在加载，显示加载指示器
+  if (isLoading) {
+    return <LoadingIndicator message={loadingMessage} />;
+  }
 
   return (
     <Suspense fallback={<LoadingIndicator />}>
@@ -101,14 +154,6 @@ class ErrorBoundary extends React.Component {
     return this.props.children
   }
 }
-
-// 加载指示器
-const LoadingIndicator = () => (
-  <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-600"></div>
-    <div className="ml-4 text-indigo-600 text-xl font-medium">加载应用...</div>
-  </div>
-)
 
 // 添加调试信息
 console.log("应用初始化中...")
