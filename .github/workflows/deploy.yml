@@ -17,7 +17,14 @@ jobs:
           node-version: '18'
       
       - name: 安装依赖
-        run: npm install
+        run: |
+          npm install
+          npm install vite-plugin-pwa --save-exact
+      
+      - name: 显示已安装的依赖
+        run: |
+          echo "已安装的依赖:"
+          npm list vite-plugin-pwa
       
       - name: 运行构建脚本
         run: npm run build
