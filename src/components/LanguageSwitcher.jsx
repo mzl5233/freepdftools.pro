@@ -37,6 +37,16 @@ const LanguageSwitcher = () => {
 
   // 切换语言
   const handleChangeLanguage = (langCode) => {
+    // 跟踪UI语言切换事件
+    if (window.gtag) {
+      window.gtag('event', 'language_changed', {
+        'event_category': 'User Preference',
+        'event_label': 'UI Language',
+        'from_language': getCurrentLanguageCode(),
+        'to_language': langCode
+      });
+    }
+    
     changeLanguage(langCode);
     setIsOpen(false);
   };

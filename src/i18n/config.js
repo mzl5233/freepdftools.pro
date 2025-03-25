@@ -16,7 +16,8 @@ const resources = {
       },
       "dropzone": {
         "dragActive": "Drop the PDF file here...",
-        "dragInactive": "Drag and drop a PDF file here, or click to select a file"
+        "dragInactive": "Drag and drop a PDF file here, or click to select a file",
+        "mobileUpload": "Tap to select a PDF file"
       },
       "output": {
         "markdownOutput": "Markdown Output",
@@ -27,12 +28,23 @@ const resources = {
         "processing": "Processing your PDF..."
       },
       "errors": {
-        "processingError": "Error processing PDF file"
+        "processingError": "Error processing PDF file",
+        "fileTooLarge": "File is too large (max 50MB)",
+        "invalidFileType": "Only PDF files are supported",
+        "translationError": "Error translating text"
+      },
+      "translation": {
+        "targetLanguage": "Target Language"
       },
       "meta": {
         "title": "PDF Tool Station - Convert PDF to Markdown",
         "description": "Convert PDF files to Markdown format with our free online tool. Preserve formatting, extract text, and convert PDFs to clean Markdown.",
         "keywords": "pdf to markdown, pdf converter, markdown converter, free pdf tool, pdf extraction"
+      },
+      "languageGroups": {
+        "popular": "Popular",
+        "asian": "Asian",
+        "other": "Other"
       }
     }
   },
@@ -47,7 +59,8 @@ const resources = {
       },
       "dropzone": {
         "dragActive": "将PDF文件拖放到这里...",
-        "dragInactive": "将PDF文件拖放到这里，或点击选择文件"
+        "dragInactive": "将PDF文件拖放到这里，或点击选择文件",
+        "mobileUpload": "点击选择PDF文件"
       },
       "output": {
         "markdownOutput": "Markdown输出",
@@ -58,12 +71,23 @@ const resources = {
         "processing": "正在处理您的PDF..."
       },
       "errors": {
-        "processingError": "处理PDF文件时出错"
+        "processingError": "处理PDF文件时出错",
+        "fileTooLarge": "文件太大（最大50MB）",
+        "invalidFileType": "仅支持PDF文件",
+        "translationError": "翻译文本时出错"
+      },
+      "translation": {
+        "targetLanguage": "目标语言"
       },
       "meta": {
         "title": "PDF工具站 - PDF转Markdown",
         "description": "使用我们的免费在线工具将PDF文件转换为Markdown格式。保留格式，提取文本，并将PDF转换为清晰的Markdown。",
         "keywords": "pdf转markdown，pdf转换器，markdown转换器，免费pdf工具，pdf提取"
+      },
+      "languageGroups": {
+        "popular": "常用语言",
+        "asian": "亚洲语言",
+        "other": "其他语言"
       }
     }
   }
@@ -122,6 +146,36 @@ const languageMapping = {
   'pl-PL': 'pl',
   'sv-SE': 'sv',
   'ar-SA': 'ar'
+};
+
+// 重定向到本地化版本
+export const redirectToLocalizedVersion = () => {
+  // 只在浏览器环境中执行
+  if (typeof window === 'undefined') return;
+  
+  // 已有语言参数则不重定向
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('lng')) return;
+  
+  // 尝试从localStorage获取上次语言
+  let detectedLang = localStorage.getItem('i18nextLng');
+  
+  // 没有则从浏览器获取
+  if (!detectedLang) {
+    detectedLang = navigator.language;
+  }
+  
+  // 映射到支持的语言
+  const languageCode = detectedLang.split('-')[0];
+  const mappedLang = languageMapping[detectedLang] || 
+                    (Object.keys(supportedLanguages).includes(languageCode) ? languageCode : 'en');
+  
+  // 添加语言参数并重定向
+  const currentUrl = new URL(window.location.href);
+  currentUrl.searchParams.set('lng', mappedLang);
+  
+  // 使用replace避免在历史记录中添加条目
+  window.location.replace(currentUrl.toString());
 };
 
 i18n
@@ -184,8 +238,8 @@ i18n
       useSuspense: true,
     },
     
-    // 启用调试模式以便排查问题
-    debug: true
+    // 调试模式
+    debug: process.env.NODE_ENV === 'development'
   });
 
 // 处理语言切换
@@ -198,6 +252,7 @@ export const changeLanguage = async (language) => {
     
     await i18n.changeLanguage(language);
     document.documentElement.lang = language;
+    document.documentElement.dir = ['ar', 'he'].includes(language) ? 'rtl' : 'ltr';
     
     // 更新HTML lang属性和网页标题
     updateMetadata(language);
@@ -205,7 +260,15 @@ export const changeLanguage = async (language) => {
     // 更新hreflang标签
     updateHrefLangTags(language);
     
-    console.log(`语言已切换到: ${language}`);
+    // 更新URL
+    const url = new URL(window.location.href);
+    url.searchParams.set('lng', language);
+    window.history.replaceState({}, '', url.toString());
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`语言已切换到: ${language}`);
+    }
+    
     return true;
   } catch (error) {
     console.error('Error changing language:', error);
@@ -240,6 +303,22 @@ export const updateMetadata = (language) => {
     keywordsMeta.content = i18n.t('meta.keywords', { defaultValue: '' });
     document.head.appendChild(keywordsMeta);
   }
+  
+  // 更新Open Graph元数据
+  const ogTitle = document.querySelector('meta[property="og:title"]');
+  if (ogTitle) {
+    ogTitle.content = title;
+  }
+  
+  const ogDesc = document.querySelector('meta[property="og:description"]');
+  if (ogDesc) {
+    ogDesc.content = i18n.t('meta.description', { defaultValue: '' });
+  }
+  
+  const ogLocale = document.querySelector('meta[property="og:locale"]');
+  if (ogLocale) {
+    ogLocale.content = language;
+  }
 };
 
 // 更新hreflang标签，用于SEO
@@ -264,7 +343,7 @@ export const updateHrefLangTags = (currentLang) => {
   Object.keys(supportedLanguages).forEach(lang => {
     const link = document.createElement('link');
     link.rel = 'alternate';
-    link.hreflang = lang;
+    link.hreflang = lang.replace('_', '-');
     link.href = `${baseUrl}?lng=${lang}`;
     document.head.appendChild(link);
   });
@@ -280,9 +359,13 @@ export const updateHrefLangTags = (currentLang) => {
 // 监听语言变化，更新元数据
 i18n.on('languageChanged', (lng) => {
   document.documentElement.lang = lng;
+  document.documentElement.dir = ['ar', 'he'].includes(lng) ? 'rtl' : 'ltr';
   updateMetadata(lng);
   updateHrefLangTags(lng);
-  console.log(`语言已更新: ${lng}`);
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`语言已更新: ${lng}`);
+  }
 });
 
 // 手动初始化语言
@@ -298,11 +381,18 @@ const initializeLanguage = () => {
 };
 
 // 初始化
-window.addEventListener('DOMContentLoaded', () => {
-  initializeLanguage();
-});
-
-// 添加到全局对象以便调试
-window.i18nInstance = i18n;
+if (typeof window !== 'undefined') {
+  // 尝试重定向到本地化版本
+  redirectToLocalizedVersion();
+  
+  window.addEventListener('DOMContentLoaded', () => {
+    initializeLanguage();
+  });
+  
+  // 添加到全局对象以便调试
+  if (process.env.NODE_ENV === 'development') {
+    window.i18nInstance = i18n;
+  }
+}
 
 export default i18n; 

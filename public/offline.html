@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF工具站 - 离线模式</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f3f4f6;
+      color: #1f2937;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 16px;
+      text-align: center;
+    }
+    
+    .container {
+      max-width: 600px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 32px;
+      margin: 0 16px;
+    }
+    
+    h1 {
+      color: #4f46e5;
+      margin-top: 0;
+      font-size: 24px;
+      font-weight: 600;
+    }
+    
+    p {
+      font-size: 16px;
+      line-height: 1.5;
+      margin: 16px 0;
+    }
+    
+    .icon {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 24px;
+      color: #4f46e5;
+    }
+    
+    .button {
+      display: inline-block;
+      background-color: #4f46e5;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 6px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: background-color 0.2s;
+      margin-top: 16px;
+      cursor: pointer;
+    }
+    
+    .button:hover {
+      background-color: #4338ca;
+    }
+    
+    .tip {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 12px 16px;
+      margin: 24px 0;
+      text-align: left;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <svg xmlns="http://www.w3.org/2000/svg" class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-4.5-8.599M13.5 8.257c-.23-.324-.498-.612-.795-.858a4.002 4.002 0 00-6.123 1.222A4 4 0 0010 15h1" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+    </svg>
+    
+    <h1>您当前处于离线状态</h1>
+    
+    <p>似乎您的设备未连接到互联网。要使用PDF工具站的全部功能，请检查您的网络连接后再试。</p>
+    
+    <div class="tip">
+      <strong>提示：</strong> 即使离线，您仍然可以访问之前使用过的部分功能和内容。
+    </div>
+    
+    <button class="button" onclick="window.location.reload()">重新连接</button>
+  </div>
+</body>
+</html> 

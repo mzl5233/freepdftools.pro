@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useDropzone } from 'react-dropzone';
 import * as pdfjsLib from 'pdfjs-dist';
 import { marked } from 'marked';
@@ -9,10 +9,15 @@ import { updateMetadata } from './i18n/config';
 // Initialize PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
+// 懒加载组件
+const PdfToMarkdown = lazy(() => import('./components/PdfToMarkdown'));
+const PdfTranslation = lazy(() => import('./components/PdfTranslation'));
+
 // 加载指示器组件
 const LoadingIndicator = () => (
   <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-75 z-50">
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+    <div className="ml-3 text-indigo-500">加载中...</div>
   </div>
 );
 
@@ -21,7 +26,11 @@ function App() {
   const [markdown, setMarkdown] = useState('');
   const [translatedText, setTranslatedText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('convert');
+  const [activeTab, setActiveTab] = useState(() => {
+    // 从localStorage恢复用户上次选择的标签
+    const savedPrefs = localStorage.getItem('pdfToolPrefs');
+    return savedPrefs ? JSON.parse(savedPrefs).activeTab || 'convert' : 'convert';
+  });
   const [previewMode, setPreviewMode] = useState('raw');
   
   // 更新元数据
@@ -32,6 +41,34 @@ function App() {
     // 更新其他元数据
     updateMetadata(i18n.language);
   }, [t, i18n.language]);
+
+  // 保存用户设置
+  useEffect(() => {
+    const currentPrefs = localStorage.getItem('pdfToolPrefs');
+    const prefsObj = currentPrefs ? JSON.parse(currentPrefs) : {};
+    localStorage.setItem('pdfToolPrefs', JSON.stringify({
+      ...prefsObj,
+      activeTab
+    }));
+  }, [activeTab]);
+  
+  // 跟踪页面视图
+  useEffect(() => {
+    // 只在生产环境中跟踪页面视图
+    if (process.env.NODE_ENV === 'production' && window.gtag) {
+      // 向Google Analytics发送页面视图事件
+      window.gtag('event', 'page_view', {
+        page_title: t('header.title'),
+        page_location: window.location.href,
+        page_path: window.location.pathname,
+        send_to: 'G-KCDFZXSB5Z'
+      });
+    }
+  }, [t, i18n.language]); // 当语言改变时重新发送页面视图
+
+  // 检测设备类型
+  const isMobile = typeof navigator !== 'undefined' && 
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   const processTextStyles = (textContent) => {
     let processedText = '';
@@ -192,69 +229,84 @@ function App() {
   };
 
   return (
-    <Suspense fallback={<LoadingIndicator />}>
-      <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-            <div className="px-6 py-4 bg-indigo-600 flex justify-between items-center">
-              <h1 className="text-2xl font-bold text-white">{t('header.title')}</h1>
-              <LanguageSwitcher />
-            </div>
+    <div className={`min-h-screen bg-gray-100 py-8 ${isMobile ? 'px-2' : 'px-4 sm:px-6 lg:px-8'}`}>
+      <div className={`max-w-4xl mx-auto ${isMobile ? '' : 'animate-fadeIn'}`}>
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="px-4 sm:px-6 py-4 bg-indigo-600 flex justify-between items-center">
+            <h1 className="text-xl sm:text-2xl font-bold text-white">{t('header.title')}</h1>
+            <LanguageSwitcher />
+          </div>
 
-            <div className="border-b border-gray-200">
-              <nav className="flex -mb-px">
-                <button
-                  onClick={() => setActiveTab('convert')}
-                  className={`${
-                    activeTab === 'convert'
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  } flex-1 py-4 px-6 text-center border-b-2 font-medium`}
-                >
-                  {t('tabs.convert')}
-                </button>
-                <button
-                  onClick={() => setActiveTab('translate')}
-                  className={`${
-                    activeTab === 'translate'
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  } flex-1 py-4 px-6 text-center border-b-2 font-medium`}
-                >
-                  {t('tabs.translate')}
-                </button>
-              </nav>
-            </div>
-
-            <div className="p-6">
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
-                  isDragActive ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 hover:border-indigo-500'
-                }`}
+          <div className="border-b border-gray-200">
+            <nav className="flex -mb-px">
+              <button
+                onClick={() => {
+                  setActiveTab('convert');
+                  // 跟踪标签切换事件
+                  if (window.gtag) {
+                    window.gtag('event', 'tab_switch', {
+                      'event_category': 'User Navigation',
+                      'event_label': 'Convert Tab',
+                      'tab_name': 'convert'
+                    });
+                  }
+                }}
+                className={`${
+                  activeTab === 'convert'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } flex-1 py-4 px-6 text-center border-b-2 font-medium transition-colors duration-200`}
+                aria-current={activeTab === 'convert' ? 'page' : undefined}
               >
-                <input {...getInputProps()} />
-                <div className="text-gray-600">
-                  {isDragActive ? (
-                    <p>{t('dropzone.dragActive')}</p>
-                  ) : (
-                    <p>{t('dropzone.dragInactive')}</p>
-                  )}
-                </div>
-              </div>
+                {t('tabs.convert')}
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('translate');
+                  // 跟踪标签切换事件
+                  if (window.gtag) {
+                    window.gtag('event', 'tab_switch', {
+                      'event_category': 'User Navigation',
+                      'event_label': 'Translate Tab',
+                      'tab_name': 'translate'
+                    });
+                  }
+                }}
+                className={`${
+                  activeTab === 'translate'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } flex-1 py-4 px-6 text-center border-b-2 font-medium transition-colors duration-200`}
+                aria-current={activeTab === 'translate' ? 'page' : undefined}
+              >
+                {t('tabs.translate')}
+              </button>
+            </nav>
+          </div>
 
-              {isLoading && (
-                <div className="mt-4 text-center text-gray-600">
-                  {t('output.processing')}
-                </div>
-              )}
-
-              {renderContent()}
+          <div className="p-4 sm:p-6">
+            <Suspense fallback={<LoadingIndicator />}>
+              {activeTab === 'convert' ? <PdfToMarkdown /> : <PdfTranslation />}
+            </Suspense>
+            
+            {/* Footer */}
+            <div className="mt-8 pt-4 border-t border-gray-200 text-center text-gray-500 text-xs">
+              <p>© {new Date().getFullYear()} PDF Tool Station</p>
+              <p className="mt-1">
+                <a 
+                  href="https://github.com/mzl5233/freepdftools.pro" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-indigo-500 hover:text-indigo-600"
+                >
+                  GitHub
+                </a>
+              </p>
             </div>
           </div>
         </div>
       </div>
-    </Suspense>
+    </div>
   );
 }
 

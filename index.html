@@ -1,33 +1,145 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh" class="h-full">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Convert PDF files to Markdown format with our free online tool. Preserve formatting, extract text, and convert PDFs to clean Markdown." />
-    <meta name="keywords" content="pdf to markdown, pdf converter, markdown converter, free pdf tool, pdf extraction" />
-    <title>PDF Tool Station</title>
-    <!-- 规范链接，将被动态更新 -->
-    <link rel="canonical" href="https://freepdftools.pro" />
-    <!-- 预载和预连接 -->
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
+    
+    <!-- Google Analytics代码 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KCDFZXSB5Z"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-KCDFZXSB5Z');
+    </script>
+    
+    <!-- 页面标题和元数据 -->
+    <title>PDF工具站 - 免费在线PDF转换工具</title>
+    <meta name="description" content="免费在线PDF转Markdown工具，轻松将PDF文件转换为Markdown格式或翻译PDF内容，无需安装软件。">
+    <meta name="keywords" content="pdf to markdown, pdf converter, markdown converter, free pdf tool, pdf extraction, pdf翻译, pdf转换">
+    <link rel="canonical" href="https://freepdftools.pro/" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    
+    <!-- 资源预加载和连接优化 -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
     <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
-    <!-- 社交媒体元标记 -->
-    <meta property="og:title" content="PDF Tool Station - Convert PDF to Markdown" />
-    <meta property="og:description" content="Convert PDF files to Markdown format with our free online tool. Preserve formatting, extract text, and convert PDFs to clean Markdown." />
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js" as="script" crossorigin />
+    <link rel="preload" as="font" href="/fonts/inter-var.woff2" type="font/woff2" crossorigin />
+    
+    <!-- 性能提示 -->
+    <link rel="preload" href="/src/main.jsx" as="script" />
+    <link rel="preload" href="/src/index.css" as="style" />
+    
+    <!-- Open Graph 标签 -->
+    <meta property="og:title" content="PDF工具站 - 免费在线PDF转换工具" />
+    <meta property="og:description" content="免费在线PDF转Markdown工具，轻松将PDF文件转换为Markdown格式或翻译PDF内容，无需安装软件。" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://freepdftools.pro" />
-    <meta property="og:locale" content="en" />
-    <!-- 确保public目录下内容可访问 -->
-    <link rel="prefetch" href="/locales/en/translation.json" />
-    <link rel="prefetch" href="/locales/zh/translation.json" />
-    <link rel="prefetch" href="/locales/es/translation.json" />
-    <link rel="prefetch" href="/locales/fr/translation.json" />
-    <link rel="prefetch" href="/locales/de/translation.json" />
-    <link rel="prefetch" href="/locales/ja/translation.json" />
+    <meta property="og:url" content="https://freepdftools.pro/" />
+    <meta property="og:image" content="https://freepdftools.pro/og-image.png" />
+    <meta property="og:locale" content="zh_CN" />
+    
+    <!-- Twitter 卡片 -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="PDF工具站 - 免费在线PDF转换工具" />
+    <meta name="twitter:description" content="免费在线PDF转Markdown工具，轻松将PDF文件转换为Markdown格式或翻译PDF内容。" />
+    <meta name="twitter:image" content="https://freepdftools.pro/og-image.png" />
+    
+    <!-- 主题颜色 -->
+    <meta name="theme-color" content="#4f46e5" />
+    
+    <!-- PWA 支持 -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    
+    <!-- 结构化数据 -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "PDF工具站",
+        "url": "https://freepdftools.pro/",
+        "description": "免费在线PDF转Markdown工具，轻松将PDF文件转换为Markdown格式或翻译PDF内容，无需安装软件。",
+        "applicationCategory": "UtilitiesApplication",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "operatingSystem": "Any"
+      }
+    </script>
+    
+    <!-- 自定义字体和样式预加载 -->
+    <style>
+      /* 初始加载优化 */
+      .initial-loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #f3f4f6;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        z-index: 9999;
+      }
+      .initial-loader__spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid #e5e7eb;
+        border-radius: 50%;
+        border-top-color: #4f46e5;
+        animation: spin 1s linear infinite;
+      }
+      .initial-loader__text {
+        margin-top: 16px;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 16px;
+        color: #4b5563;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      /* 避免内容闪烁 */
+      body {
+        background-color: #f3f4f6;
+      }
+    </style>
   </head>
-  <body>
+  <body class="h-full">
+    <!-- 初始加载指示器 -->
+    <div class="initial-loader" id="initial-loader">
+      <div class="initial-loader__spinner"></div>
+      <p class="initial-loader__text">加载应用中...</p>
+    </div>
+    
+    <!-- 应用挂载点 -->
     <div id="root"></div>
+    
+    <!-- 移除初始加载指示器的脚本 -->
+    <script>
+      window.addEventListener('load', function() {
+        // 给React一点时间渲染，然后移除初始加载指示器
+        setTimeout(function() {
+          const loader = document.getElementById('initial-loader');
+          if (loader) {
+            loader.style.opacity = '0';
+            loader.style.transition = 'opacity 0.3s ease';
+            setTimeout(function() {
+              if (loader && loader.parentNode) {
+                loader.parentNode.removeChild(loader);
+              }
+            }, 300);
+          }
+        }, 500);
+      });
+    </script>
+    
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
