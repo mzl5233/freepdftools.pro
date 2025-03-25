@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { supportedLanguages, changeLanguage } from '../i18n/config';
+import { changeLanguage } from '../i18n/config';
 
-// 精简语言列表，与截图匹配
+// 根据截图更新的语言列表
 const displayLanguages = [
   { code: 'en', name: 'English' },
-  { code: 'zh-CN', name: '简体中文' },
+  { code: 'zh', name: '简体中文' },
   { code: 'zh-TW', name: '繁體中文' },
   { code: 'ko', name: '한국어' },
   { code: 'ja', name: '日本語' },
@@ -17,20 +17,17 @@ const displayLanguages = [
 ];
 
 const LanguageSwitcher = () => {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
-  // 处理语言映射
-  const getDisplayLanguage = (code) => {
-    if (code === 'zh-CN' || code === 'zh-TW' || code === 'zh-HK') {
-      return code;
-    }
-    return code.split('-')[0];
+  // 获取当前语言代码
+  const getCurrentLanguageCode = () => {
+    return i18n.language.split('-')[0];
   };
 
   // 获取当前语言显示名称
   const getCurrentLanguageLabel = () => {
-    const currentLang = getDisplayLanguage(i18n.language);
+    const currentLang = getCurrentLanguageCode();
     const langObj = displayLanguages.find(lang => 
       lang.code === currentLang || 
       lang.code.split('-')[0] === currentLang
@@ -40,38 +37,30 @@ const LanguageSwitcher = () => {
 
   // 切换语言
   const handleChangeLanguage = (langCode) => {
-    // 处理特殊语言映射
-    let targetLang = langCode;
-    if (langCode === 'zh-CN' || langCode === 'zh-TW') {
-      targetLang = 'zh';
-    }
-    
-    changeLanguage(targetLang);
+    changeLanguage(langCode);
     setIsOpen(false);
   };
 
-  // 点击外部关闭下拉菜单
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (isOpen && !event.target.closest('.language-switcher')) {
-        setIsOpen(false);
-      }
-    };
+  // 切换下拉菜单
+  const toggleDropdown = () => {
+    setIsOpen(!isOpen);
+  };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
+  // 点击外部关闭下拉菜单
+  const handleClickOutside = () => {
+    if (isOpen) {
+      setIsOpen(false);
+    }
+  };
 
   return (
-    <div className="language-switcher relative">
+    <div className="relative">
       <button 
         className="flex items-center space-x-1 px-3 py-1 rounded-md bg-indigo-700 text-white"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggleDropdown}
       >
         <span className="i18n-globe">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </span>
@@ -82,19 +71,25 @@ const LanguageSwitcher = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-          <div className="py-1">
-            {displayLanguages.map((lang) => (
-              <button
-                key={lang.code}
-                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                onClick={() => handleChangeLanguage(lang.code)}
-              >
-                {lang.name}
-              </button>
-            ))}
+        <>
+          <div 
+            className="fixed inset-0 z-10" 
+            onClick={handleClickOutside}
+          ></div>
+          <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg z-20">
+            <div className="py-1">
+              {displayLanguages.map((lang) => (
+                <button
+                  key={lang.code}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={() => handleChangeLanguage(lang.code)}
+                >
+                  {lang.name}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

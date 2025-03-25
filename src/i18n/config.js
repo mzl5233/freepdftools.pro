@@ -3,6 +3,72 @@ import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import Backend from 'i18next-http-backend';
 
+// 内置翻译资源，以防静态文件加载失败
+const resources = {
+  en: {
+    translation: {
+      "header": {
+        "title": "PDF Tool Station"
+      },
+      "tabs": {
+        "convert": "PDF to Markdown",
+        "translate": "PDF Translation"
+      },
+      "dropzone": {
+        "dragActive": "Drop the PDF file here...",
+        "dragInactive": "Drag and drop a PDF file here, or click to select a file"
+      },
+      "output": {
+        "markdownOutput": "Markdown Output",
+        "translatedText": "Translated Text",
+        "raw": "Raw",
+        "formatted": "Formatted",
+        "downloadMarkdown": "Download Markdown",
+        "processing": "Processing your PDF..."
+      },
+      "errors": {
+        "processingError": "Error processing PDF file"
+      },
+      "meta": {
+        "title": "PDF Tool Station - Convert PDF to Markdown",
+        "description": "Convert PDF files to Markdown format with our free online tool. Preserve formatting, extract text, and convert PDFs to clean Markdown.",
+        "keywords": "pdf to markdown, pdf converter, markdown converter, free pdf tool, pdf extraction"
+      }
+    }
+  },
+  zh: {
+    translation: {
+      "header": {
+        "title": "PDF工具站"
+      },
+      "tabs": {
+        "convert": "PDF转Markdown",
+        "translate": "PDF翻译"
+      },
+      "dropzone": {
+        "dragActive": "将PDF文件拖放到这里...",
+        "dragInactive": "将PDF文件拖放到这里，或点击选择文件"
+      },
+      "output": {
+        "markdownOutput": "Markdown输出",
+        "translatedText": "翻译文本",
+        "raw": "原始",
+        "formatted": "格式化",
+        "downloadMarkdown": "下载Markdown",
+        "processing": "正在处理您的PDF..."
+      },
+      "errors": {
+        "processingError": "处理PDF文件时出错"
+      },
+      "meta": {
+        "title": "PDF工具站 - PDF转Markdown",
+        "description": "使用我们的免费在线工具将PDF文件转换为Markdown格式。保留格式，提取文本，并将PDF转换为清晰的Markdown。",
+        "keywords": "pdf转markdown，pdf转换器，markdown转换器，免费pdf工具，pdf提取"
+      }
+    }
+  }
+};
+
 // 支持的语言列表，按优先级分组
 export const supportedLanguages = {
   // 第一层（高优先级）
@@ -67,10 +133,13 @@ i18n
   .use(initReactI18next)
   // 初始化i18next
   .init({
+    // 内置资源
+    resources,
+    
     // 后端配置
     backend: {
-      // 翻译文件的加载路径 - 修正路径
-      loadPath: '/locales/{{lng}}/translation.json',
+      // 修正翻译文件的加载路径
+      loadPath: './locales/{{lng}}/translation.json',
     },
     
     // 语言检测配置
@@ -98,8 +167,8 @@ i18n
     // 确保不是加载中状态显示键名
     partialBundledLanguages: true,
     
-    // 资源预加载
-    preload: ['en', 'zh', 'es', 'fr', 'de', 'ja'],
+    // 禁用资源预加载，改用按需加载
+    // preload: ['en', 'zh', 'es', 'fr', 'de', 'ja'],
     
     // 插值配置
     interpolation: {
@@ -115,13 +184,18 @@ i18n
       useSuspense: true,
     },
     
-    // 调试模式
-    debug: false
+    // 启用调试模式以便排查问题
+    debug: true
   });
 
 // 处理语言切换
 export const changeLanguage = async (language) => {
   try {
+    // 处理特殊语言映射
+    if (language === 'zh-CN' || language === 'zh-TW') {
+      language = 'zh';
+    }
+    
     await i18n.changeLanguage(language);
     document.documentElement.lang = language;
     
@@ -131,6 +205,7 @@ export const changeLanguage = async (language) => {
     // 更新hreflang标签
     updateHrefLangTags(language);
     
+    console.log(`语言已切换到: ${language}`);
     return true;
   } catch (error) {
     console.error('Error changing language:', error);
@@ -207,6 +282,7 @@ i18n.on('languageChanged', (lng) => {
   document.documentElement.lang = lng;
   updateMetadata(lng);
   updateHrefLangTags(lng);
+  console.log(`语言已更新: ${lng}`);
 });
 
 // 手动初始化语言
@@ -222,6 +298,11 @@ const initializeLanguage = () => {
 };
 
 // 初始化
-initializeLanguage();
+window.addEventListener('DOMContentLoaded', () => {
+  initializeLanguage();
+});
+
+// 添加到全局对象以便调试
+window.i18nInstance = i18n;
 
 export default i18n; 
