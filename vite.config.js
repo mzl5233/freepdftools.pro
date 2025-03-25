@@ -11,18 +11,18 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt', 'locales/**/*'],
       manifest: {
-        name: 'PDF Tool Station',
-        short_name: 'PDFTools',
-        description: 'Convert PDF files to Markdown and translate PDF documents online',
+        name: 'PDF工具站',
+        short_name: 'PDF工具',
+        description: '免费在线PDF转Markdown工具，轻松将PDF文件转换为Markdown格式或翻译PDF内容',
         theme_color: '#4f46e5',
         icons: [
           {
-            src: 'pwa-192x192.png',
+            src: '/icons/icon-192x192.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'pwa-512x512.png',
+            src: '/icons/icon-512x512.png',
             sizes: '512x512',
             type: 'image/png'
           }
@@ -30,8 +30,8 @@ export default defineConfig({
       }
     })
   ],
-  // 公共基础路径
-  base: './',
+  // 公共基础路径 - 修复为绝对路径
+  base: '/',
   
   // 配置静态资源目录
   publicDir: 'public',
@@ -54,6 +54,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    // 确保资产URL正确
+    assetsInlineLimit: 4096,
     // 增强模块预加载
     modulePreload: {
       polyfill: true,
@@ -63,6 +65,10 @@ export default defineConfig({
     rollupOptions: {
       input: '/index.html',
       output: {
+        // 确保生成的资产路径正确
+        assetFileNames: 'assets/[name].[hash].[ext]',
+        chunkFileNames: 'js/[name].[hash].js',
+        entryFileNames: 'js/[name].[hash].js',
         manualChunks: {
           // 将PDF.js单独打包
           'pdf-lib': ['pdfjs-dist'],
@@ -79,10 +85,11 @@ export default defineConfig({
     ssrManifest: true
   },
   
-  // 预渲染配置
+  // 移除可能导致路径问题的实验性配置
   experimental: {
-    renderBuiltUrl(filename) {
-      return `./${filename}`
+    // 使用绝对路径
+    renderBuiltUrl(filename, { hostId, hostType, type }) {
+      return '/' + filename;
     }
   }
 })
