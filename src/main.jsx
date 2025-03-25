@@ -1,11 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { Suspense, lazy } from 'react'
-import './i18n/config'
+import { Suspense, lazy, useEffect } from 'react'
 import './index.css'
 
 // 确保i18n在应用渲染前初始化
-import './i18n/config'
+import i18nInstance, { initLanguage } from './i18n/config'
 
 // 懒加载主应用组件
 const App = lazy(() => import('./App'))
@@ -33,6 +32,36 @@ const logPerformance = () => {
     }
   }
 }
+
+// 应用包装器，用于初始化设置
+const AppWrapper = () => {
+  // 初始化多语言支持
+  useEffect(() => {
+    // 在组件挂载时初始化语言
+    const detectedLanguage = initLanguage();
+    console.log(`检测到的语言: ${detectedLanguage}`);
+    
+    // 监听URL变化，以便于处理语言切换
+    const handleUrlChange = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlLang = urlParams.get('lng');
+      if (urlLang && urlLang !== i18nInstance.language) {
+        i18nInstance.changeLanguage(urlLang);
+      }
+    };
+
+    window.addEventListener('popstate', handleUrlChange);
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+    };
+  }, []);
+
+  return (
+    <Suspense fallback={<LoadingIndicator />}>
+      <App />
+    </Suspense>
+  );
+};
 
 // 全局错误边界组件
 class ErrorBoundary extends React.Component {
@@ -87,16 +116,14 @@ console.log("环境:", import.meta.env.MODE)
 console.log("基础路径:", import.meta.env.BASE_URL)
 
 // 确保public目录中的资源路径正确
-const publicPath = import.meta.env.BASE_URL || './'
+const publicPath = import.meta.env.BASE_URL || '/'
 console.log("Public路径:", publicPath)
 
 // 使用严格模式渲染应用
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <Suspense fallback={<LoadingIndicator />}>
-        <App />
-      </Suspense>
+      <AppWrapper />
     </ErrorBoundary>
   </React.StrictMode>,
 )
@@ -110,9 +137,29 @@ if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
     navigator.serviceWorker.register('/service-worker.js')
       .then(registration => {
         console.log('SW registered: ', registration)
+        
+        // 监听新的service worker等待安装
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // 通知用户有新版本
+              if (confirm('检测到新版本，是否立即更新？')) {
+                registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                window.location.reload();
+              }
+            }
+          });
+        });
       })
       .catch(registrationError => {
         console.log('SW registration failed: ', registrationError)
       })
   })
+  
+  // 当service worker告知需要更新时，处理页面刷新
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    console.log('新的Service Worker控制此页面，正在刷新...');
+    window.location.reload();
+  });
 }
