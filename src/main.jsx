@@ -2,6 +2,8 @@ import React, { Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
+
+// 确保i18n在应用渲染前初始化
 import './i18n/config'
 
 // 加载指示器组件

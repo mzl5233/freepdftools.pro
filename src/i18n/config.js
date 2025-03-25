@@ -69,7 +69,7 @@ i18n
   .init({
     // 后端配置
     backend: {
-      // 翻译文件的加载路径
+      // 翻译文件的加载路径 - 修正路径
       loadPath: '/locales/{{lng}}/translation.json',
     },
     
@@ -90,31 +90,16 @@ i18n
       
       // 总是存储语言选择
       caches: ['localStorage', 'cookie'],
-      
-      // 自定义语言匹配函数
-      customDetector: (detectedLng) => {
-        if (detectedLng) {
-          // 检查是否需要映射到支持的语言
-          if (languageMapping[detectedLng]) {
-            return languageMapping[detectedLng];
-          }
-          
-          // 如果检测到的语言是带区域代码的 (如 en-US)，尝试获取主要语言代码 (如 en)
-          const mainLngCode = detectedLng.split('-')[0];
-          
-          // 检查主要语言代码是否被支持
-          if (Object.keys(supportedLanguages).includes(mainLngCode)) {
-            return mainLngCode;
-          }
-        }
-        
-        // 默认返回英语
-        return 'en';
-      }
     },
     
     // 默认语言
     fallbackLng: 'en',
+    
+    // 确保不是加载中状态显示键名
+    partialBundledLanguages: true,
+    
+    // 资源预加载
+    preload: ['en', 'zh', 'es', 'fr', 'de', 'ja'],
     
     // 插值配置
     interpolation: {
@@ -122,16 +107,16 @@ i18n
     },
     
     // 错误处理
-    saveMissing: process.env.NODE_ENV === 'development', // 开发环境下记录缺失的翻译键
-    missingKeyHandler: (lng, ns, key) => {
-      console.warn(`Missing translation key: "${key}" for language: ${lng}`);
-    },
+    saveMissing: false, // 不记录缺失的翻译键，避免干扰用户
     
-    // 加载失败处理
+    // 加载设置
     load: 'currentOnly',
     react: {
       useSuspense: true,
-    }
+    },
+    
+    // 调试模式
+    debug: false
   });
 
 // 处理语言切换
@@ -223,5 +208,20 @@ i18n.on('languageChanged', (lng) => {
   updateMetadata(lng);
   updateHrefLangTags(lng);
 });
+
+// 手动初始化语言
+const initializeLanguage = () => {
+  const currentLang = i18n.language || window.navigator.language || 'en';
+  const mappedLang = languageMapping[currentLang] || currentLang.split('-')[0] || 'en';
+  
+  if (Object.keys(supportedLanguages).includes(mappedLang)) {
+    changeLanguage(mappedLang);
+  } else {
+    changeLanguage('en');
+  }
+};
+
+// 初始化
+initializeLanguage();
 
 export default i18n; 
