@@ -1,169 +1,212 @@
-// PDF工具站 Service Worker
-const CACHE_NAME = 'pdf-tools-cache-v1';
+// PDF工具站服务工作线程
+const CACHE_NAME = 'pdf-tools-cache-v2';
+const OFFLINE_URL = '/offline.html';
 
 // 需要缓存的资源列表
-const RESOURCES_TO_CACHE = [
+const PRE_CACHE_URLS = [
   '/',
   '/index.html',
+  '/offline.html',
+  '/assets/index.css',
+  '/favicon.ico',
+  '/logo.svg',
   '/manifest.json',
-  '/locales/zh/translation.json',
   '/locales/en/translation.json',
-  '/locales/ja/translation.json'
+  '/locales/zh/translation.json',
+  '/locales/ja/translation.json',
+  '/locales/ko/translation.json',
+  '/locales/es/translation.json',
+  '/locales/fr/translation.json',
+  '/locales/de/translation.json',
+  '/locales/vi/translation.json',
+  '/locales/zh-TW/translation.json'
 ];
 
-// 安装事件 - 预缓存关键资源
+// 安装事件：预缓存重要资源
 self.addEventListener('install', (event) => {
   console.log('[Service Worker] 安装');
   
+  // 强制激活，不等待旧的service worker
+  self.skipWaiting();
+  
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[Service Worker] 缓存资源');
-        return cache.addAll(RESOURCES_TO_CACHE);
-      })
-      .then(() => {
-        // 强制激活
-        return self.skipWaiting();
-      })
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      console.log('[Service Worker] 预缓存');
+      
+      // 缓存关键资源
+      try {
+        await cache.addAll(PRE_CACHE_URLS);
+        console.log('[Service Worker] 预缓存完成');
+      } catch (error) {
+        console.error('[Service Worker] 预缓存失败', error);
+      }
+    })()
   );
 });
 
-// 激活事件 - 清理旧缓存
+// 激活事件：清理旧缓存
 self.addEventListener('activate', (event) => {
   console.log('[Service Worker] 激活');
   
+  // 立即获取控制权
+  event.waitUntil(clients.claim());
+  
+  // 删除旧缓存
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[Service Worker] 删除旧缓存:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => {
-      // 立即接管页面
-      return self.clients.claim();
+    caches.keys().then((keyList) => {
+      return Promise.all(keyList.map((key) => {
+        if (key !== CACHE_NAME) {
+          console.log('[Service Worker] 删除旧缓存', key);
+          return caches.delete(key);
+        }
+      }));
     })
   );
 });
 
-// 网络优先策略，回退到缓存
-const networkFirstWithCacheFallback = async (request) => {
-  try {
-    // 尝试从网络获取
-    const networkResponse = await fetch(request);
-    
-    // 复制响应，因为响应流只能使用一次
-    const clonedResponse = networkResponse.clone();
-    
-    // 如果成功获取，更新缓存
-    caches.open(CACHE_NAME).then((cache) => {
-      cache.put(request, clonedResponse);
-    });
-    
-    return networkResponse;
-  } catch (error) {
-    // 网络请求失败，尝试从缓存中获取
-    console.log('[Service Worker] 网络请求失败，使用缓存:', request.url);
-    const cachedResponse = await caches.match(request);
-    
-    // 如果缓存中存在，返回缓存的响应
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
-    // 如果缓存中也不存在，返回一个离线页面或错误响应
-    if (request.destination === 'document') {
-      return caches.match('/offline.html') || new Response('网络不可用', {
-        status: 503,
-        statusText: 'Service Unavailable',
-        headers: new Headers({
-          'Content-Type': 'text/html'
-        })
-      });
-    }
-    
-    // 其他资源类型的错误处理
-    return new Response('资源不可用', {
-      status: 503,
-      statusText: 'Service Unavailable'
-    });
-  }
+// 判断请求是否为导航请求（HTML）
+const isNavigationRequest = (request) => {
+  return request.mode === 'navigate' || 
+         (request.method === 'GET' && 
+          request.headers.get('accept').includes('text/html'));
 };
 
-// 缓存优先策略，用于静态资源
-const cacheFirstWithNetworkFallback = async (request) => {
-  // 先尝试从缓存中获取
+// 判断请求是否为API请求
+const isApiRequest = (url) => {
+  return url.pathname.startsWith('/api/');
+};
+
+// 判断请求是否为翻译资源
+const isTranslationRequest = (url) => {
+  return url.pathname.includes('/locales/') && url.pathname.includes('/translation.json');
+};
+
+// 判断请求是否为谷歌分析
+const isGoogleAnalyticsRequest = (url) => {
+  return url.hostname.includes('google-analytics.com') || 
+         url.hostname.includes('analytics.google.com') || 
+         url.hostname.includes('googletagmanager.com');
+};
+
+// 判断请求是否为CSS或JS资源
+const isStaticAsset = (url) => {
+  return url.pathname.endsWith('.css') || 
+         url.pathname.endsWith('.js') || 
+         url.pathname.endsWith('.json') || 
+         url.pathname.endsWith('.png') || 
+         url.pathname.endsWith('.jpg') || 
+         url.pathname.endsWith('.svg') || 
+         url.pathname.endsWith('.ico');
+};
+
+// 处理fetch事件
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
+  // 跳过不支持的请求
+  if (event.request.method !== 'GET') {
+    return;
+  }
+  
+  // 对谷歌分析请求不进行缓存
+  if (isGoogleAnalyticsRequest(url)) {
+    return;
+  }
+  
+  // 处理策略
+  if (isNavigationRequest(event.request)) {
+    // 导航请求（HTML页面）使用网络优先策略
+    event.respondWith(networkFirstStrategy(event.request));
+  } else if (isApiRequest(url)) {
+    // API请求使用网络优先策略
+    event.respondWith(networkFirstStrategy(event.request));
+  } else if (isTranslationRequest(url)) {
+    // 翻译文件使用网络优先策略
+    event.respondWith(networkFirstStrategy(event.request));
+  } else if (isStaticAsset(url)) {
+    // 静态资源使用缓存优先策略
+    event.respondWith(cacheFirstStrategy(event.request));
+  } else {
+    // 其他资源使用网络优先策略
+    event.respondWith(networkFirstStrategy(event.request));
+  }
+});
+
+// 缓存优先，网络回退策略
+async function cacheFirstStrategy(request) {
   const cachedResponse = await caches.match(request);
+  
   if (cachedResponse) {
     return cachedResponse;
   }
   
-  // 缓存中没有，尝试从网络获取
   try {
     const networkResponse = await fetch(request);
-    const clonedResponse = networkResponse.clone();
     
-    // 更新缓存
-    caches.open(CACHE_NAME).then((cache) => {
-      cache.put(request, clonedResponse);
-    });
+    // 缓存有效的响应
+    if (networkResponse && networkResponse.status === 200) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+    }
     
     return networkResponse;
   } catch (error) {
-    console.log('[Service Worker] 无法获取资源:', request.url);
+    console.error('[Service Worker] 获取资源失败', request.url, error);
     
-    // 如果是图片资源，可以返回一个占位图
-    if (request.destination === 'image') {
-      return new Response('', {
-        status: 200,
-        statusText: 'OK'
-      });
+    // 对于图片和图标，返回空响应而不是报错
+    if (request.url.match(/\.(jpg|jpeg|png|gif|svg|ico)/i)) {
+      return new Response('', { status: 200, headers: { 'Content-Type': 'image/svg+xml' } });
     }
     
-    // 对于其他类型的资源，返回一个错误响应
-    return new Response('资源不可用', {
-      status: 503,
-      statusText: 'Service Unavailable'
-    });
+    // 对于失败的页面请求，返回离线页面
+    if (isNavigationRequest(request)) {
+      return caches.match(OFFLINE_URL);
+    }
+    
+    // 其他资源请求失败时仍然抛出错误
+    throw error;
   }
-};
+}
 
-// 拦截请求
-self.addEventListener('fetch', (event) => {
-  // 排除非GET请求和浏览器扩展请求
-  if (event.request.method !== 'GET' || 
-      !event.request.url.startsWith('http')) {
-    return;
+// 网络优先，缓存回退策略
+async function networkFirstStrategy(request) {
+  try {
+    // 首先尝试网络请求
+    const networkResponse = await fetch(request);
+    
+    // 缓存成功的响应
+    if (networkResponse && networkResponse.status === 200) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    console.log('[Service Worker] 网络请求失败，尝试从缓存获取', request.url);
+    
+    // 从缓存中尝试获取
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    // 如果是导航请求，返回离线页面
+    if (isNavigationRequest(request)) {
+      return caches.match(OFFLINE_URL);
+    }
+    
+    // 对于图片和图标失败，返回空响应而不是错误
+    if (request.url.match(/\.(jpg|jpeg|png|gif|svg|ico)/i)) {
+      return new Response('', { status: 200, headers: { 'Content-Type': 'image/svg+xml' } });
+    }
+    
+    // 其他请求抛出错误
+    throw error;
   }
-  
-  const url = new URL(event.request.url);
-  
-  // 不同的资源类型使用不同的策略
-  if (
-    event.request.destination === 'document' || 
-    url.pathname.includes('/locales/') || 
-    url.pathname.includes('/api/')
-  ) {
-    // HTML、翻译资源和API请求使用网络优先策略
-    event.respondWith(networkFirstWithCacheFallback(event.request));
-  } else if (
-    event.request.destination === 'style' || 
-    event.request.destination === 'script' || 
-    event.request.destination === 'image' || 
-    event.request.destination === 'font'
-  ) {
-    // 静态资源使用缓存优先策略
-    event.respondWith(cacheFirstWithNetworkFallback(event.request));
-  } else {
-    // 其他请求
-    event.respondWith(networkFirstWithCacheFallback(event.request));
-  }
-});
+}
 
-// 接收消息 - 处理页面发送的消息
+// 接收消息
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
