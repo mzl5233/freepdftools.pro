@@ -36,7 +36,7 @@ function App() {
   // 更新元数据
   useEffect(() => {
     // 设置页面标题
-    document.title = t('header.title');
+    document.title = t('meta.title');
     
     // 更新其他元数据
     updateMetadata(i18n.language);
@@ -58,7 +58,7 @@ function App() {
     if (process.env.NODE_ENV === 'production' && window.gtag) {
       // 向Google Analytics发送页面视图事件
       window.gtag('event', 'page_view', {
-        page_title: t('header.title'),
+        page_title: t('meta.title'),
         page_location: window.location.href,
         page_path: window.location.pathname,
         send_to: 'G-KCDFZXSB5Z'
@@ -292,16 +292,6 @@ function App() {
             {/* Footer */}
             <div className="mt-8 pt-4 border-t border-gray-200 text-center text-gray-500 text-xs">
               <p>© {new Date().getFullYear()} PDF Tool Station</p>
-              <p className="mt-1">
-                <a 
-                  href="https://github.com/mzl5233/freepdftools.pro" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-indigo-500 hover:text-indigo-600"
-                >
-                  GitHub
-                </a>
-              </p>
             </div>
           </div>
         </div>

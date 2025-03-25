@@ -37,7 +37,7 @@ const resources = {
         "targetLanguage": "Target Language"
       },
       "meta": {
-        "title": "PDF Tool Station - Convert PDF to Markdown",
+        "title": "Convert PDF to Markdown Online | PDF Tool Station",
         "description": "Convert PDF files to Markdown format with our free online tool. Preserve formatting, extract text, and convert PDFs to clean Markdown.",
         "keywords": "pdf to markdown, pdf converter, markdown converter, free pdf tool, pdf extraction"
       },
@@ -51,7 +51,7 @@ const resources = {
   zh: {
     translation: {
       "header": {
-        "title": "PDF工具站"
+        "title": "PDF转Markdown工具"
       },
       "tabs": {
         "convert": "PDF转Markdown",
@@ -80,7 +80,7 @@ const resources = {
         "targetLanguage": "目标语言"
       },
       "meta": {
-        "title": "PDF工具站 - PDF转Markdown",
+        "title": "PDF转Markdown在线工具 | 免费PDF转换器",
         "description": "使用我们的免费在线工具将PDF文件转换为Markdown格式。保留格式，提取文本，并将PDF转换为清晰的Markdown。",
         "keywords": "pdf转markdown，pdf转换器，markdown转换器，免费pdf工具，pdf提取"
       },
@@ -248,7 +248,10 @@ const initI18n = () => {
         nsMode: 'default',
         transSupportBasicHtmlNodes: true,
         transKeepBasicHtmlNodesFor: ['br', 'strong', 'i', 'p'],
-      }
+      },
+      
+      // 添加默认资源，确保即使加载失败也有翻译
+      resources: resources
     });
   
   return i18n;
@@ -327,23 +330,47 @@ export const updateMetadata = (language) => {
   const metaDescription = document.querySelector('meta[name="description"]');
   if (metaDescription) {
     metaDescription.content = t('meta.description');
+  } else {
+    // 如果不存在，创建一个
+    const newMetaDescription = document.createElement('meta');
+    newMetaDescription.name = 'description';
+    newMetaDescription.content = t('meta.description');
+    document.head.appendChild(newMetaDescription);
   }
   
   // 更新meta关键词
   const metaKeywords = document.querySelector('meta[name="keywords"]');
   if (metaKeywords) {
     metaKeywords.content = t('meta.keywords');
+  } else {
+    // 如果不存在，创建一个
+    const newMetaKeywords = document.createElement('meta');
+    newMetaKeywords.name = 'keywords';
+    newMetaKeywords.content = t('meta.keywords');
+    document.head.appendChild(newMetaKeywords);
   }
   
   // 更新Open Graph元数据
   const ogTitle = document.querySelector('meta[property="og:title"]');
   if (ogTitle) {
     ogTitle.content = t('meta.title');
+  } else {
+    // 如果不存在，创建一个
+    const newOgTitle = document.createElement('meta');
+    newOgTitle.setAttribute('property', 'og:title');
+    newOgTitle.content = t('meta.title');
+    document.head.appendChild(newOgTitle);
   }
   
   const ogDescription = document.querySelector('meta[property="og:description"]');
   if (ogDescription) {
     ogDescription.content = t('meta.description');
+  } else {
+    // 如果不存在，创建一个
+    const newOgDescription = document.createElement('meta');
+    newOgDescription.setAttribute('property', 'og:description');
+    newOgDescription.content = t('meta.description');
+    document.head.appendChild(newOgDescription);
   }
   
   // 更新Twitter卡片元数据
@@ -362,7 +389,7 @@ export const updateMetadata = (language) => {
   if (structuredData) {
     try {
       const data = JSON.parse(structuredData.textContent);
-      data.name = t('header.title');
+      data.name = t('meta.title');
       data.description = t('meta.description');
       structuredData.textContent = JSON.stringify(data);
     } catch (e) {
@@ -386,9 +413,17 @@ export const changeLanguage = async (language) => {
           i18nInstance.addResourceBundle(language, 'translation', data);
         } else {
           console.warn(`无法加载语言资源: ${language}`);
+          // 如果加载失败，检查是否有内置的资源
+          if (resources[language]) {
+            i18nInstance.addResourceBundle(language, 'translation', resources[language].translation);
+          }
         }
       } catch (error) {
         console.error(`加载语言资源时出错: ${language}`, error);
+        // 如果加载失败，使用内置资源
+        if (resources[language]) {
+          i18nInstance.addResourceBundle(language, 'translation', resources[language].translation);
+        }
       }
     }
     
@@ -413,6 +448,10 @@ export const reloadLanguageResources = async () => {
     // 重新加载当前语言资源
     await i18nInstance.reloadResources(currentLng);
     console.log(`已刷新语言资源: ${currentLng}`);
+    
+    // 强制更新UI
+    document.dispatchEvent(new Event('i18n-updated'));
+    
     return true;
   } catch (error) {
     console.error('刷新语言资源时出错:', error);

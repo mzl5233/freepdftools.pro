@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { changeLanguage, getCurrentLanguage } from '../i18n/config';
+import { changeLanguage, supportedLanguages, getCurrentLanguage, reloadLanguageResources } from '../i18n/config';
 
 // 语言列表
 const displayLanguages = [
@@ -19,125 +19,121 @@ const LanguageSwitcher = () => {
   const { i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [currentLang, setCurrentLang] = useState(getCurrentLanguage() || 'en');
+  const [isChanging, setIsChanging] = useState(false);
 
-  // 当语言变化时更新状态
+  // 监听语言变化
   useEffect(() => {
-    const handleLanguageChanged = (lng) => {
-      console.log(`语言已切换到: ${lng}`);
-      setCurrentLang(lng);
+    const handleLanguageChanged = () => {
+      setCurrentLang(i18n.language);
+      setIsChanging(false);
     };
 
     i18n.on('languageChanged', handleLanguageChanged);
-    
-    // 在组件卸载时清理事件监听
+
     return () => {
       i18n.off('languageChanged', handleLanguageChanged);
     };
   }, [i18n]);
 
-  // 获取当前语言代码
-  const getCurrentLanguageCode = () => {
-    return currentLang.split('-')[0];
-  };
+  // 监听i18n-updated事件
+  useEffect(() => {
+    const handleI18nUpdated = () => {
+      // 强制UI更新
+      setIsChanging(false);
+      setCurrentLang(i18n.language);
+    };
 
-  // 获取当前语言显示名称
-  const getCurrentLanguageLabel = () => {
-    const currentLangCode = getCurrentLanguageCode();
-    const langObj = displayLanguages.find(lang => 
-      lang.code === currentLang || 
-      lang.code.split('-')[0] === currentLangCode
-    );
-    return langObj ? langObj.name : 'English';
-  };
+    document.addEventListener('i18n-updated', handleI18nUpdated);
+    return () => {
+      document.removeEventListener('i18n-updated', handleI18nUpdated);
+    };
+  }, []);
 
-  // 切换语言
-  const handleChangeLanguage = async (langCode) => {
+  // 强制同步当前语言
+  useEffect(() => {
+    if (currentLang !== i18n.language) {
+      setCurrentLang(i18n.language);
+    }
+  }, [i18n.language]);
+
+  const handleLanguageChange = async (langCode) => {
+    if (langCode === currentLang || isChanging) return;
+    
+    setIsChanging(true);
+    setIsOpen(false);
+    
     try {
-      // 跟踪UI语言切换事件
-      if (window.gtag) {
-        window.gtag('event', 'language_changed', {
-          'event_category': 'User Preference',
-          'event_label': 'UI Language',
-          'from_language': getCurrentLanguageCode(),
-          'to_language': langCode
-        });
-      }
-      
-      console.log(`正在切换语言到: ${langCode}`);
+      console.log(`切换语言到: ${langCode}`);
       const success = await changeLanguage(langCode);
       
-      if (success) {
-        console.log(`语言切换成功: ${langCode}`);
-        // 强制刷新页面内容
-        window.location.reload();
-      } else {
-        console.error(`语言切换失败: ${langCode}`);
+      if (!success) {
+        console.log('语言切换失败，尝试刷新资源...');
+        await reloadLanguageResources();
       }
       
-      setIsOpen(false);
+      // 触发页面更新
+      document.dispatchEvent(new Event('i18n-updated'));
+      
+      // 如果仍然失败，考虑刷新页面
+      if (i18n.language !== langCode) {
+        console.log('语言未成功切换，刷新页面...');
+        setTimeout(() => window.location.reload(), 100);
+      }
     } catch (error) {
-      console.error('语言切换出错:', error);
-      setIsOpen(false);
+      console.error('语言切换错误:', error);
+      setIsChanging(false);
     }
   };
 
-  // 切换下拉菜单
-  const toggleDropdown = () => {
-    setIsOpen(!isOpen);
-  };
-
-  // 点击外部关闭下拉菜单
-  const handleClickOutside = () => {
-    if (isOpen) {
-      setIsOpen(false);
-    }
+  // 获取当前语言的显示名称
+  const getCurrentLanguageName = () => {
+    return supportedLanguages[currentLang]?.nativeName || 'English';
   };
 
   return (
     <div className="relative">
-      <button 
-        className="flex items-center space-x-1 px-3 py-1 rounded-md bg-indigo-700 text-white"
-        onClick={toggleDropdown}
-        aria-haspopup="true"
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center px-3 py-1.5 text-white rounded-md bg-indigo-700 hover:bg-indigo-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         aria-expanded={isOpen}
+        disabled={isChanging}
       >
-        <span className="i18n-globe">
-          <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+        <span className="mr-1">
+          {isChanging ? '...' : getCurrentLanguageName()}
         </span>
-        <span className="language-label">{getCurrentLanguageLabel()}</span>
-        <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+        <svg
+          className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'transform rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
       {isOpen && (
-        <>
-          <div 
-            className="fixed inset-0 z-10" 
-            onClick={handleClickOutside}
-            aria-hidden="true"
-          ></div>
-          <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg z-20">
-            <div className="py-1" role="menu" aria-orientation="vertical">
-              {displayLanguages.map((lang) => (
-                <button
-                  key={lang.code}
-                  className={`block w-full text-left px-4 py-2 text-sm ${
-                    currentLang === lang.code || currentLang.split('-')[0] === lang.code.split('-')[0] 
-                      ? 'bg-indigo-100 text-indigo-700' 
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                  onClick={() => handleChangeLanguage(lang.code)}
-                  role="menuitem"
-                >
-                  {lang.name}
-                </button>
-              ))}
-            </div>
+        <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 max-h-96 overflow-y-auto">
+          <div className="py-1" role="menu" aria-orientation="vertical">
+            {Object.entries(supportedLanguages).map(([code, { nativeName }]) => (
+              <button
+                key={code}
+                onClick={() => handleLanguageChange(code)}
+                className={`block w-full text-left px-4 py-2 text-sm ${
+                  code === currentLang
+                    ? 'bg-indigo-100 text-indigo-900 font-medium'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+                role="menuitem"
+              >
+                {nativeName}
+                {code === currentLang && (
+                  <span className="ml-2 text-indigo-600">✓</span>
+                )}
+              </button>
+            ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
